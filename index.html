@@ -299,6 +299,8 @@
       </select>
       <input id="setAiKey" placeholder="API key (optional)" style="margin-top:8px" autocomplete="off" />
       <input id="setAiModel" placeholder="model (optional, e.g. gemini-2.0-flash)" style="margin-top:8px" autocomplete="off" />
+      <button class="btn ghost" id="btnAiTest" style="margin-top:8px">AI test karo</button>
+      <div id="aiTestOut" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
     </div>
     <button class="btn" id="setSave">Save karo</button>
     <button class="btn ghost" data-close>Band karo</button>
@@ -1026,6 +1028,13 @@ async function handle(raw, _depth){
       status('Mic dabao aur bolo');
       return;
     }
+    // AI lagi hai par jawab nahi aaya - asli wajah dikhao
+    if (state._aiErr){
+      reply('⚠️','AI se baat nahi ho payi', 'Wajah: <b>'+escapeHtml(state._aiErr)+'</b><br>Settings me key aur model check karo, ya “AI test karo” dabao.');
+      say('AI se baat nahi ho payi. Settings me key check karo.');
+      status('Mic dabao aur bolo');
+      return;
+    }
   }
 
   // ---- unknown: kabhi khaali haath wapas nahi
@@ -1352,11 +1361,13 @@ async function aiChat(text){
     }
     const r = await fetch(url, { method:'POST', headers, body });
     const j = await r.json();
+    if (j && j.error){ state._aiErr = (j.error.message || JSON.stringify(j.error)).slice(0,180); return null; }
     const txt = state.aiProvider === 'openai'
       ? (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content)
       : (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts[0].text);
+    state._aiErr = txt ? '' : 'AI ne khaali jawab diya';
     return (txt || '').trim() || null;
-  }catch(e){ return null; }
+  }catch(e){ state._aiErr = String(e && e.message || e).slice(0,180); return null; }
 }
 
 paintToggles();
@@ -1388,6 +1399,19 @@ $('btnImport').onclick = importSettings;
 $('btnPickContact').onclick = pickContact;
 $('setMirrors').value = state.mirrors.join('\n');
 $('setAiProv').value = state.aiProvider;
+const _aiTestBtn = $('btnAiTest');
+if (_aiTestBtn) _aiTestBtn.onclick = async ()=>{
+  state.aiKey = ($('setAiKey').value || '').trim();
+  state.aiProvider = $('setAiProv').value;
+  state.aiModel = ($('setAiModel').value || '').trim();
+  LS.set('aiKey', state.aiKey); LS.set('aiProvider', state.aiProvider); LS.set('aiModel', state.aiModel);
+  const out = $('aiTestOut');
+  if (!state.aiKey || state.aiProvider === 'none'){ out.textContent = 'Pehle provider chuno aur key daalo.'; return; }
+  out.textContent = 'Test kar raha hoon…';
+  state._aiErr = '';
+  const ans = await aiChat('tum kaun ho');
+  out.textContent = ans ? ('✅ Chal gaya: ' + ans.slice(0,80)) : ('❌ ' + (state._aiErr || 'jawab nahi aaya'));
+};
 $('setAiKey').value = state.aiKey;
 $('setAiModel').value = state.aiModel;
 $('setRate').oninput = ()=>{ $('rateVal').textContent = $('setRate').value; };
