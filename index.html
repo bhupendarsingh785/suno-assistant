@@ -393,16 +393,25 @@ if ('speechSynthesis' in window){
   loadVoices();
   window.speechSynthesis.onvoiceschanged = loadVoices;
 }
-function say(text){
-  if (!state.speak || !('speechSynthesis' in window)) return;
+function say(text, _retry){
+  if (!state.speak || !('speechSynthesis' in window) || !text) return;
   try{
+    if (!voices.length) loadVoices();
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = state.lang; u.rate = Number(state.rate) || 1; u.pitch = 1;
     const base = state.lang.split('-')[0];
-    const v = voices.find(v=>v.lang===state.lang) || voices.find(v=>v.lang && v.lang.split('-')[0]===base);
+    const v = voices.find(v=>v.lang===state.lang) || voices.find(v=>v.lang && v.lang.split('-')[0]===base) || voices[0];
     if (v) u.voice = v;
     window.speechSynthesis.speak(u);
+    // Android Chrome kabhi pehli baar chup rehta hai - ek baar dobara try
+    if (!_retry){
+      setTimeout(()=>{
+        try{
+          if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) say(text, true);
+        }catch(e){}
+      }, 700);
+    }
   }catch(e){}
 }
 
@@ -807,6 +816,7 @@ async function handle(raw, _depth){
   // ---- Seetal Trader market
   if (/(market|nifty|bank ?nifty|sensex|share|stock|bhav|bhaav|reliance|tcs|sbi|infosys|hdfc|adani|itc|tesla|apple|nvidia|मार्केट|निफ्टी|सेंसेक्स|भाव|शेयर)/.test(t)){
     try{
+      say('Market ka data dekh rahi hoon.');
       const ans = await marketAnswer(t);
       reply('📈', ans.title, ans.body);
       say(ans.speech);
@@ -1029,6 +1039,7 @@ async function handle(raw, _depth){
   // ---- AI se seedha jawab
   if (!state._aiBusy){
     state._aiBusy = true;
+    say('Ek second, soch rahi hoon.');
     const ans = await aiChat(text);
     state._aiBusy = false;
     if (ans){
