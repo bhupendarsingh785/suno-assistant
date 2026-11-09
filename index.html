@@ -1037,21 +1037,19 @@ async function handle(raw, _depth){
     }
   }
 
-  // ---- unknown: kabhi khaali haath wapas nahi
+  // ---- unknown: khud Google par nahi bhejta, poochh kar bhejta hai
   const guess = findSite(t);
-  const words = t.trim().split(/\s+/).filter(Boolean);
-  if (words.length >= 2){
-    const q = text.replace(/^(suno|hey|please|zara)\s+/i,'').trim();
-    openUrl('https://www.google.com/search?q='+encodeURIComponent(q));
-    reply('🔎','Ye main seedha nahi jaanta', 'Aapne kaha: “'+escapeHtml(text)+'”<br>Google par dhoondh raha hoon. Commands tab me poora list bhi hai.');
-    say('Ye main seedha nahi jaanta, isliye Google par dhoondh raha hoon.');
-    addHistory(text,'Google: '+q);
-  } else {
-    reply('🤔','Thoda aur batao', 'Aapne kaha: “'+escapeHtml(text)+'”<br>'+
-      (guess ? 'Shayad aap <b>'+guess.name+'</b> kholna chahte the — “'+guess.name+' kholo” boliye.<br>' : '')+
-      'Jaise: “YouTube kholo”, “mausam batao”, “market kaisa hai”, “call karo 9876543210”, “5 minute ka timer”.');
-    say('Thoda aur batao — jaise YouTube kholo, mausam batao, ya market kaisa hai.');
-  }
+  const q = text.replace(/^(suno|hey|please|zara)\s+/i,'').trim();
+  const gurl = 'https://www.google.com/search?q='+encodeURIComponent(q);
+  reply('🤔','Ye main abhi nahi samajh paya',
+    'Aapne kaha: “'+escapeHtml(text)+'”<br><br>'+
+    (state.aiKey && state.aiProvider !== 'none'
+      ? 'AI se jawab nahi aaya — Settings me “AI test karo” dabao.'
+      : 'Poori samajh ke liye Settings me <b>AI key</b> daal do (free hai) — phir main har baat samajh jaunga.')+
+    (guess ? '<br><br>Shayad aap <b>'+guess.name+'</b> kholna chahte the — “'+guess.name+' kholo” boliye.' : '')+
+    '<br><br><a href="'+gurl+'" target="_blank" rel="noopener" style="color:var(--acc2)">Google par dhoondhna hai to yahan dabao</a>');
+  say('Ye main abhi nahi samajh paya. Settings me AI on kar do, phir main sab samajh jaunga.');
+  addHistory(text,'Samajh nahi aaya');
   status('Mic dabao aur bolo');
 }
 
