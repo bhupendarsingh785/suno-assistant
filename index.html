@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v22</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v23</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -1031,42 +1031,35 @@ async function handle(raw, _depth){
     addHistory(text,'Browser open'); status('Mic dabao aur bolo'); return;
   }
 
-  // ---- unknown: pehle free AI, phir local jawab
+  // ---- unknown: turant local jawab, phir AI se behtar karo
   {
+    const loc = localAnswer(text);
+    const generic = /Main samajh rahi hoon tumne kaha/.test(loc);
+
+    if (!generic){
+      reply('💬','Suno', escapeHtml(loc).replace(/\n/g,'<br>'));
+      say(loc);
+      addHistory(text, 'Jawab diya');
+      status('Mic dabao aur bolo');
+      return;
+    }
+
+    // generic hai to AI se poochho (8 second), na aaye to local hi
+    reply('💬','Suno', 'Soch rahi hoon…');
     status('Soch rahi hoon…', 'busy');
-    const past = (state.history || []).slice(0,4).map(h => h.cmd).join(' | ');
-    const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant (girlish, pyaar se, chhoti line). '
-      + 'Roman Hindi me 2-3 line me seedha jawab do, aur aakhir me ek chhota sawal poochho. '
-      + (past ? 'Pichhli baatein: ' + past + '. ' : '')
-      + 'Swag ne kaha: "' + text + '"';
     let ai = null;
-    try{ ai = await freeAI(prompt); }catch(e){}
-    const loc = (ai && ai.trim()) ? ai.trim() : localAnswer(text);
-    reply('💬','Suno', escapeHtml(loc).replace(/\n/g,'<br>'));
-    say(loc);
-    addHistory(text, 'Jawab: ' + loc.slice(0, 40));
+    try{
+      const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant. Roman Hindi me 2-3 chhoti line me seedha jawab do, '
+        + 'aakhir me ek chhota sawal. Swag ne kaha: "' + text + '"';
+      ai = await freeAI(prompt);
+    }catch(e){}
+    const finalText = (ai && ai.trim()) ? ai.trim() : loc;
+    reply('💬','Suno', escapeHtml(finalText).replace(/\n/g,'<br>'));
+    say(finalText);
+    addHistory(text, 'Jawab diya');
     status('Mic dabao aur bolo');
     return;
   }
-
-  // ---- unknown: pehle optional AI se samjhne ki koshish
-  if (state.aiProvider !== 'none' && state.aiKey && !state._aiBusy){
-    state._aiBusy = true;
-    reply('🤖','AI se samajh raha hoon…', escapeHtml(text));
-    const aiCmd = await aiInterpret(text);
-    const mapped = aiCmd ? mapAiCmd(aiCmd) : null;
-    state._aiBusy = false;
-    if (mapped){ return handle(mapped); }
-  }
-
-  // ---- unknown
-  const guess = findSite(t);
-  reply('🤔','Samajh nahi aaya', 'Aapne kaha: “'+escapeHtml(text)+'”<br>'+
-    (guess ? 'Shayad aap <b>'+guess.name+'</b> kholna chahte the — “'+guess.name+' kholo” boliye.<br>' : '')+
-    'Examples: “YouTube kholo”, “Google par news search karo”, “call karo 9876543210”, “mausam batao”, “note likho doodh lana hai”, “5 minute ka timer”.');
-  say('Samajh nahi aaya. Commands tab me list dekh lein.');
-  addHistory(text,'Samajh nahi aaya');
-  status('Mic dabao aur bolo');
 }
 
 /* ============ UI wiring ============ */
