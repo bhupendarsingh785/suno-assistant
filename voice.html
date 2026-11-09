@@ -168,20 +168,37 @@ function moodOf(t){
   return "normal";
 }
 
-async function askAI(prompt){
+async function askAI(prompt, ms){
   const base = "https://text.pollinations.ai/" + encodeURIComponent(prompt) + "?model=openai";
   const tries = [base,
     "https://api.allorigins.win/raw?url=" + encodeURIComponent(base),
     "https://corsproxy.io/?" + encodeURIComponent(base)];
   for (const u of tries){
     try{
-      const r = await fetch(u, { cache:"no-store" });
+      const ctl = new AbortController();
+      const to = setTimeout(() => ctl.abort(), ms || 9000);
+      const r = await fetch(u, { cache:"no-store", signal: ctl.signal });
+      clearTimeout(to);
       if (!r.ok) continue;
       const t = (await r.text() || "").trim();
-      if (t.length > 3) return t;
+      if (t.length > 3 && !/^<!doctype|^<html/i.test(t)) return t;
     }catch(e){}
   }
   return null;
+}
+
+/* ---- local dimaag: AI na chale to bhi jawab khali na jaye ---- */
+function localAnswer(said){
+  const t = said.toLowerCase();
+  if (/(kaun ho|tumhara naam|tum kaun|aap kaun)/.test(t)) return "Main Suno hoon — Swag ki apni assistant. Tum bolo, main sunungi; market, system, ya koi bhi baat — turant bataungi.";
+  if (/(kaise ho|kya haal|namaste|hello|hi )/.test(t)) return "Main bilkul theek hoon. Tum batao — kya karna hai?";
+  if (/(kya kar sakti|kya kar sakta|features|kya kya)/.test(t)) return "Main sun sakti hoon, bol sakti hoon, camera se dekh sakti hoon, market ka haal bata sakti hoon, aur tumhare system ke saare tools ke baare me jawab de sakti hoon.";
+  if (/(market|nifty|sensex|reliance|share|bhav)/.test(t)) return "Market ka live data Trader app me hai — wahan Nifty, Bank Nifty aur har symbol ka entry-stop-target dikhta hai. Chaho to main yahan bhi bata sakti hoon, bas thoda intezaar.";
+  if (/(system|tool|kaun chal)/.test(t)) return "System me Trader, Builder, Doctor, Gyan, Vault, Map aur Hub — sab jude hue hain. Trader kholo to poora hisaab dikh jayega.";
+  if (/(udaas|pareshan|thak|tension|mann nahi)/.test(t)) return "Sun rahi hoon. Jo bhi ho raha hai, batao — main yahin hoon, jaldi koi salah nahi dungi.";
+  if (/(time|samay|kitne baje)/.test(t)) { const d = new Date(); return "Abhi " + d.toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit" }) + " baje hain."; }
+  if (/(date|tareekh|aaj kaun)/.test(t)) { const d = new Date(); return "Aaj " + d.toLocaleDateString("en-IN", { day:"2-digit", month:"long", year:"numeric" }) + " hai."; }
+  return "Samajh gayi — \"" + said.slice(0, 40) + "\". Thoda saaf bolo ya dobara bolo, main dhyan se sun rahi hoon.";
 }
 
 async function answer(said){
@@ -198,17 +215,15 @@ async function answer(said){
     : "";
   const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant. Roman Hindi me, 2-3 chhoti line, seedha jawab. '
     + moodLine + " " + (past ? "Pichhli baat:\n" + past + "\n" : "") + 'Ab Swag ne kaha: "' + said + '"';
-  const t = await askAI(prompt);
-  if (t){
-    $("reply").textContent = t.trim();
-    try{ if (window.SeetalCore) SeetalCore.push("chat", { who:"assistant", text: t.trim().slice(0,300) }); }catch(e){}
-    paintMem();
-    speak(t.trim());
-  } else {
-    $("reply").textContent = "Jawab nahi aa paya — net check karo.";
-    speak("Jawab nahi aa paya.");
-  }
-  $("state").textContent = S.on ? "Sun rahi hoon…" : "Dabao — main sunungi aur dekhungi";
+  let t = null;
+  try{ t = await askAI(prompt, 12000); }catch(e){}
+  const local = localAnswer(said);
+  const finalText = t ? t.trim() : local;
+  $("reply").textContent = finalText;
+  try{ if (window.SeetalCore) SeetalCore.push("chat", { who:"assistant", text: finalText.slice(0,300) }); }catch(e){}
+  paintMem();
+  speak(finalText);
+  $("state").textContent = S.on ? (t ? "Sun rahi hoon…" : "Sun rahi hoon… (offline jawab)") : "Dabao — main sunungi aur dekhungi";
 }
 
 /* ---------- ek button: sab saath ---------- */
