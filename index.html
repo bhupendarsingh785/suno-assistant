@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v26</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v27</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -431,6 +431,7 @@ function buildRec(){
     }
     if (interim) $('transcript').innerHTML = '<span class="interim">'+escapeHtml(interim)+'</span>';
     if (final){
+      markWorking();
       $('transcript').textContent = final;
       try{
         handle(final);
@@ -513,18 +514,22 @@ function runRec(){
   if (!micOn) return;
   try{
     rec = buildRec();
-    rec.lang = state.lang;
-    rec.continuous = false;      // single shot - isse final text pakka aata hai
+    applyCfgTo(rec);
     rec.interimResults = true;
-    rec.maxAlternatives = 3;
     rec.onend = () => {
       if (micOn){ clearTimeout(micTimer); micTimer = setTimeout(runRec, 300); }
       else { state.listening = false; $('mic').classList.remove('listening'); }
     };
     rec.onerror = (e) => {
-      if (e && (e.error === 'not-allowed' || e.error === 'service-not-allowed')){
+      const err = e && e.error;
+      if (err === 'not-allowed' || err === 'service-not-allowed'){
         micOn = false;
-        status('Mic ki permission nahi mili', 'err');
+        status('Mic ki permission nahi mili — Chrome me Allow karo', 'err');
+        return;
+      }
+      if (err === 'no-speech' || err === 'network' || err === 'aborted' || err === 'audio-capture'){
+        // khud doosra setup try karo
+        if (micOn) setTimeout(() => { autoRepairMic(); }, 300);
       }
     };
     rec.start();
@@ -1446,6 +1451,54 @@ async function pickContacts(){
 }
 
 
+
+/* ============ apna best setup yaad rakho aur khud badlo ============ */
+const CFG_KEY = 'seetal.suno.bestcfg.v1';
+const CFG_LIST = [
+  { lang: 'hi-IN', continuous: false, maxAlt: 3 },
+  { lang: 'hi-IN', continuous: true,  maxAlt: 1 },
+  { lang: 'en-IN', continuous: false, maxAlt: 3 },
+  { lang: 'en-IN', continuous: true,  maxAlt: 1 },
+];
+function getCfg(){
+  try{ const c = JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); if (c && c.lang) return c; }catch(e){}
+  return CFG_LIST[0];
+}
+function setCfg(c){ try{ localStorage.setItem(CFG_KEY, JSON.stringify(c)); }catch(e){} }
+function nextCfg(){
+  const cur = getCfg();
+  const i = CFG_LIST.findIndex(c => c.lang === cur.lang && c.continuous === cur.continuous);
+  return CFG_LIST[(i + 1) % CFG_LIST.length];
+}
+
+let cfgTries = 0;
+function applyCfgTo(rec){
+  const c = getCfg();
+  try{ rec.lang = c.lang; rec.continuous = !!c.continuous; rec.maxAlternatives = c.maxAlt || 1; }catch(e){}
+  return c;
+}
+
+/* mic fail hone par khud doosra setup try karo, jo chale use yaad rakho */
+async function autoRepairMic(){
+  if (cfgTries >= CFG_LIST.length){
+    cfgTries = 0;
+    status('Mic setups sab try ho gaye — Chrome settings me microphone allow karo', 'err');
+    return false;
+  }
+  cfgTries++;
+  const c = nextCfg();
+  setCfg(c);
+  status('Setup badal kar dobara try kar rahi hoon… (' + c.lang + (c.continuous ? ', continuous' : '') + ')');
+  try{ micOn = false; clearTimeout(micTimer); try{ rec && rec.stop(); }catch(e){} }catch(e){}
+  await new Promise(r => setTimeout(r, 500));
+  micOn = true;
+  runRec();
+  return true;
+}
+
+/* jo setup chala, use permanent yaad rakho */
+function markWorking(){ try{ localStorage.setItem(CFG_KEY + '.ok', JSON.stringify(getCfg())); cfgTries = 0; }catch(e){} }
+
 /* ================= khud ko theek karna (self-heal) ================= */
 async function selfHeal(silent){
   const log = [];
@@ -1497,6 +1550,8 @@ async function selfHeal(silent){
   let fixed = [];
   if (perm === 'granted' && SR && !micOn){
     try{ micOn = true; runRec(); fixed.push('Mic khud chalu kar diya'); }catch(e){ micOn = false; }
+  } else if (SR && !micOn && perm !== 'granted'){
+    fixed.push('Mic ke liye Allow dabana padega (browser ki majboori)');
   }
   if (!voices.length){
     try{ window.speechSynthesis.onvoiceschanged = () => { loadVoices(); }; fixed.push('Awaaz list dobara load kar di'); }catch(e){}
