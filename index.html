@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v35</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v36</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -484,27 +484,8 @@ async function speakReplySafe(said){
   const txt = String(said || '').trim();
   if (!txt) return;
 
-  try{
-    $('transcript').textContent = txt;
-    const loc = localAnswer(txt);
-    reply('💬','Suno', escapeHtml(loc).replace(/\n/g,'<br>'));
-    say(loc);
-    addHistory(txt, 'Jawab diya');
-    status(micOn ? 'Sun rahi hoon…' : 'Mic dabao aur bolo');
-  }catch(e){
-    reply('⚠️','Dikkat', escapeHtml(String(e.message||e)).slice(0,120));
-  }
-
-  // AI se behtar jawab (agar mile to badal do)
-  try{
-    const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant. Roman Hindi me 2-3 chhoti line, seedha jawab, '
-      + 'aakhir me ek chhota sawal. Swag ne kaha: "' + txt + '"';
-    const ai = await apiAsk(prompt, 12000);
-    if (ai && ai.trim().length > 8){
-      reply('💬','Suno', escapeHtml(ai.trim()).replace(/\n/g,'<br>'));
-      say(ai.trim());
-    }
-  }catch(e){}
+  try{ $('transcript').textContent = txt; }catch(e){}
+  await smartReply(txt);
 
   // mic chalu rakho
   if (micOn && !state.listening) setTimeout(()=>{ try{ if (micOn) runRec(); }catch(e){} }, 400);
@@ -1098,7 +1079,11 @@ async function handle(raw, _depth){
     return;
   }
 
-  // ---- unknown: turant local jawab, phir AI se behtar karo
+  // ---- unknown: AI se insaan jaisa jawab
+  {
+    await smartReply(text, { keepPlaceholder: false });
+    return;
+  }
   {
     const loc = localAnswer(text);
     const generic = /Main samajh rahi hoon tumne kaha/.test(loc);
@@ -1455,6 +1440,32 @@ function docShowErrors(){
   }).join('');
   reply('🩺','Error log (aapke phone me hi)', html + '<br><button class="btn ghost" id="errClear" style="margin-top:6px">Log saaf karo</button>');
   const b = $('errClear'); if (b) b.onclick = ()=>{ try{ localStorage.removeItem('suno_errors'); }catch(e){} toast('Log saaf'); };
+}
+
+async function smartReply(txt, opts){
+  opts = opts || {};
+  const said = String(txt || '').trim();
+  if (!said) return;
+  status('Soch rahi hoon…', 'busy');
+  if (!opts.keepPlaceholder) reply('💬','Suno', 'Soch rahi hoon…');
+
+  let ai = null;
+  try{
+    const past = (state.history || []).slice(0,4).map(h => h.cmd).join(' | ');
+    const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant, ek dost jaisi, thodi girlish. '
+      + 'Roman Hindi me 2-3 chhoti line me seedha jawab do, aur aakhir me ek chhota sawal poochho. '
+      + 'Bilkul insaan ki tarah baat karo, robot jaisa nahi. '
+      + (past ? 'Pichhli baatein: ' + past + '. ' : '')
+      + 'Swag ne kaha: "' + said + '"';
+    ai = await apiAsk(prompt, 14000);
+  }catch(e){}
+
+  const finalText = (ai && ai.trim().length > 8) ? ai.trim() : localAnswer(said);
+  reply('💬','Suno', escapeHtml(finalText).replace(/\n/g,'<br>'));
+  say(finalText);
+  try{ addHistory(said, 'Jawab diya'); }catch(e){}
+  status(micOn ? 'Sun rahi hoon…' : 'Mic dabao aur bolo');
+  return finalText;
 }
 
 function localAnswer(said){
