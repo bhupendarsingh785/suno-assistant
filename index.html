@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v25</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v26</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -181,6 +181,7 @@
   </div>
 
   <div style="text-align:center;margin:6px 0 10px">
+  <button class="btn ghost" id="healBtn" style="padding:9px 14px;border-radius:12px;font-size:13px;margin-right:6px">🔧 Khud theek karo</button>
   <button class="btn ghost" id="contactBtn" style="padding:9px 14px;border-radius:12px;font-size:13px;margin-right:6px">📇 Contacts</button>
   <button class="btn ghost" id="micCheck" style="padding:9px 14px;border-radius:12px;font-size:13px">🎤 Mic check karo</button>
   <div id="micOut" style="font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.6"></div>
@@ -1087,6 +1088,8 @@ if (_sr) _sr.onclick = () => {
 };
 
 /* ---- mic ka poora check: asli wajah batayega ---- */
+const _hb = document.getElementById('healBtn');
+if (_hb) _hb.onclick = () => selfHeal(false);
 const _cbtn = document.getElementById('contactBtn');
 if (_cbtn) _cbtn.onclick = pickContacts;
 const _mc = document.getElementById('micCheck');
@@ -1441,6 +1444,82 @@ async function pickContacts(){
     reply('📇','Contacts nahi khule', escapeHtml(String(e.message||e)).slice(0,120));
   }
 }
+
+
+/* ================= khud ko theek karna (self-heal) ================= */
+async function selfHeal(silent){
+  const log = [];
+  const add = (ok, txt) => log.push((ok ? '✅ ' : '🔧 ') + txt);
+
+  // 1. SpeechRecognition
+  if (!SR){ add(false, 'Is browser me voice nahi — Chrome me kholo'); }
+  else add(true, 'Sunne ka system maujood');
+
+  // 2. mic permission
+  let perm = 'unknown';
+  try{
+    if (navigator.permissions && navigator.permissions.query){
+      const p = await navigator.permissions.query({ name: 'microphone' });
+      perm = p.state;
+    }
+  }catch(e){}
+  add(perm === 'granted', 'Mic permission: ' + perm);
+
+  // 3. awaaz (TTS)
+  try{
+    if (!voices.length) loadVoices();
+    await new Promise(r => setTimeout(r, 400));
+    if (!voices.length) loadVoices();
+    const hi = (voices || []).filter(v => /^hi/i.test(v.lang || '')).length;
+    add(voices.length > 0, voices.length + ' awaaz mili' + (hi ? ' (' + hi + ' Hindi)' : ' — Hindi voice nahi, English use hogi'));
+  }catch(e){ add(false, 'Awaaz list nahi mili'); }
+
+  // 4. storage
+  try{
+    localStorage.setItem('_sh', '1');
+    const ok = localStorage.getItem('_sh') === '1';
+    localStorage.removeItem('_sh');
+    add(ok, ok ? 'Storage theek' : 'Storage band (private mode?)');
+  }catch(e){ add(false, 'Storage band hai'); }
+
+  // 5. AI (background, chhota test)
+  let aiOk = false;
+  try{
+    const r = await Promise.race([
+      freeAI('Sirf ek shabd likho: theek'),
+      new Promise(res => setTimeout(() => res(null), 6000))
+    ]);
+    aiOk = !!r;
+  }catch(e){}
+  add(aiOk, aiOk ? 'AI ka jawab aa raha hai' : 'AI se abhi jawab nahi — local dimaag chalega');
+
+  // ---- auto fixes ----
+  let fixed = [];
+  if (perm === 'granted' && SR && !micOn){
+    try{ micOn = true; runRec(); fixed.push('Mic khud chalu kar diya'); }catch(e){ micOn = false; }
+  }
+  if (!voices.length){
+    try{ window.speechSynthesis.onvoiceschanged = () => { loadVoices(); }; fixed.push('Awaaz list dobara load kar di'); }catch(e){}
+  }
+  if (!aiOk){ fixed.push('AI ki jagah local dimaag laga diya'); }
+
+  const msg = log.join('<br>') + (fixed.length ? '<br><br><b>Khud theek kiya:</b><br>• ' + fixed.join('<br>• ') : '');
+  if (!silent){ reply('🔧','Khud ki jaanch', msg); }
+  status(fixed.length ? 'Khud theek kar liya' : 'Sab theek hai');
+  return { log, fixed };
+}
+
+/* page khulte hi: agar permission pehle se hai to mic apne aap chalu */
+setTimeout(async () => {
+  try{
+    let granted = false;
+    if (navigator.permissions && navigator.permissions.query){
+      const p = await navigator.permissions.query({ name: 'microphone' });
+      granted = p.state === 'granted';
+    }
+    if (granted && SR && !micOn){ micOn = true; runRec(); status('Mic khud chalu — bolo', 'live'); }
+  }catch(e){}
+}, 1500);
 
 /* ================= optional AI samajhne wala ================= */
 function mapAiCmd(cmd){
