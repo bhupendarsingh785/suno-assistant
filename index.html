@@ -183,6 +183,18 @@
     </button>
   </div>
 
+  <div style="display:flex;gap:10px;justify-content:center;margin:6px 0 10px">
+    <button id="alwaysBtn" class="btn ghost" style="padding:12px 18px;border-radius:14px;font-size:14px;font-weight:800">
+      🔁 Always sunta rahe — BAND
+    </button>
+  </div>
+  <div id="levelWrap" style="max-width:280px;margin:0 auto 10px;display:none">
+    <div style="height:8px;background:#1a2432;border-radius:99px;overflow:hidden">
+      <div id="levelBar" style="height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#fbbf24,#f87171);transition:width .08s"></div>
+    </div>
+    <div class="sub" style="text-align:center;margin-top:4px" id="levelTxt">Awaaz ka level</div>
+  </div>
+
   <div class="transcript" id="transcript">Jaise: <b>“YouTube kholo”</b>, <b>“call karo 98765…”</b>, <b>“mausam batao”</b></div>
 
   <div class="card" id="replyCard">
@@ -1174,6 +1186,111 @@ if (_btnSpeak) _btnSpeak.onclick = ()=>{
   say(t);
   state.speak = was;
 };
+/* ================= always-on listening ================= */
+state.always = LS.get('always', false);
+const alwaysBtn = $('alwaysBtn');
+function paintAlways(){
+  if (!alwaysBtn) return;
+  alwaysBtn.textContent = state.always ? '🔁 Always sun rahi hoon — ON (band karne ke liye dabao)' : '🔁 Always sunta rahe — BAND';
+  alwaysBtn.style.borderColor = state.always ? 'rgba(34,197,94,.6)' : '';
+  alwaysBtn.style.color = state.always ? '#22c55e' : '';
+  $('levelWrap').style.display = state.always ? 'block' : 'none';
+}
+alwaysBtn.onclick = async () => {
+  state.always = !state.always;
+  LS.set('always', state.always);
+  paintAlways();
+  if (state.always){
+    toast('Always-on chalu — ab tak sunti rahegi jab tak band na karo');
+    startAlways();
+  } else {
+    stopAlways();
+    toast('Always-on band');
+  }
+};
+
+let alwaysRec = null, alwaysTimer = null, levelCtx = null, levelStream = null, levelRAF = null;
+
+async function startLevelMeter(){
+  try{
+    if (levelStream) return;
+    levelStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    levelCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = levelCtx.createMediaStreamSource(levelStream);
+    const an = levelCtx.createAnalyser();
+    an.fftSize = 512;
+    src.connect(an);
+    const buf = new Uint8Array(an.frequencyBinCount);
+    const loop = () => {
+      an.getByteFrequencyData(buf);
+      let sum = 0;
+      for (let i=0;i<buf.length;i++) sum += buf[i];
+      const avg = sum / buf.length;
+      const pct = Math.min(100, Math.round(avg * 2.2));
+      const bar = $('levelBar');
+      if (bar) bar.style.width = pct + '%';
+      const txt = $('levelTxt');
+      if (txt) txt.textContent = pct < 6 ? 'Awaaz nahi aa rahi — paas aao ya zor se bolo' : pct < 25 ? 'Halki awaaz — thoda zor se' : 'Achha sun rahi hoon';
+      levelRAF = requestAnimationFrame(loop);
+    };
+    loop();
+  }catch(e){}
+}
+function stopLevelMeter(){
+  try{ if (levelRAF) cancelAnimationFrame(levelRAF); }catch(e){}
+  try{ if (levelStream) levelStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+  levelStream = null; levelCtx = null;
+}
+
+function startAlways(){
+  if (!SR) { toast('Is browser me voice nahi'); return; }
+  startLevelMeter();
+  const run = () => {
+    if (!state.always) return;
+    try{
+      alwaysRec = new SR();
+      alwaysRec.lang = state.lang;
+      alwaysRec.continuous = true;
+      alwaysRec.interimResults = true;
+      alwaysRec.maxAlternatives = 3;
+      alwaysRec.onresult = (ev) => {
+        let finalTxt = '', interim = '';
+        for (let i = ev.resultIndex; i < ev.results.length; i++){
+          const r = ev.results[i];
+          if (r.isFinal) finalTxt += r[0].transcript + ' ';
+          else interim += r[0].transcript;
+        }
+        if (interim){ $('transcript').textContent = interim; }
+        if (finalTxt.trim()){
+          const said = finalTxt.trim();
+          $('transcript').textContent = said;
+          // bol rahi ho to sunna rok do, jawab do, phir wapas sunna
+          try{ window.speechSynthesis.cancel(); }catch(e){}
+          handle(said);
+        }
+      };
+      alwaysRec.onerror = (e) => {
+        if (e && (e.error === 'not-allowed' || e.error === 'service-not-allowed')){ state.always = false; LS.set('always', false); paintAlways(); stopAlways(); toast('Mic ki permission nahi mili'); }
+      };
+      alwaysRec.onend = () => {
+        if (state.always){ clearTimeout(alwaysTimer); alwaysTimer = setTimeout(run, 400); }
+      };
+      alwaysRec.start();
+      status('Always sun rahi hoon — bolo');
+    }catch(e){
+      clearTimeout(alwaysTimer);
+      alwaysTimer = setTimeout(run, 1200);
+    }
+  };
+  run();
+}
+function stopAlways(){
+  clearTimeout(alwaysTimer);
+  try{ if (alwaysRec) alwaysRec.stop(); }catch(e){}
+  alwaysRec = null;
+  stopLevelMeter();
+}
+
 $('mic').onclick = ()=>startListening();
 $('typeGo').onclick = ()=>{
   const v = $('typeIn').value.trim();
@@ -1739,6 +1856,9 @@ $('setSave').onclick = ()=>{
 };
 
 /* service worker: offline shell */
+paintAlways();
+if (state.always) setTimeout(()=>{ try{ startAlways(); }catch(e){} }, 1200);
+
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
