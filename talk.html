@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Suno Talk</title>
+<style>
+  :root{--bg:#0b0f19;--card:#161e30;--line:#26324b;--txt:#eef2fb;--dim:#94a3c4;--green:#34d399;--red:#fb7185;--violet:#7c6cf8;--cyan:#22d3ee}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;min-height:100vh;background:radial-gradient(120% 60% at 50% -10%,#20264f,#0b0f19 45%,#060911);
+       color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans Devanagari",sans-serif;
+       display:flex;flex-direction:column;align-items:center;padding:16px;gap:12px}
+  h1{font-size:19px;margin:0}
+  .sub{color:var(--dim);font-size:12.5px;margin:2px 0 0;text-align:center}
+  .mic{width:150px;height:150px;border-radius:50%;border:none;font-size:46px;color:#fff;cursor:pointer;
+       background:linear-gradient(135deg,var(--violet),#3b82f6);display:grid;place-items:center;
+       box-shadow:0 16px 44px -14px rgba(124,108,248,.9)}
+  .mic.on{background:linear-gradient(135deg,#fb7185,#fbbf24);animation:pulse 1.2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(251,113,133,.55)}70%{box-shadow:0 0 0 22px rgba(251,113,133,0)}100%{box-shadow:0 0 0 0 rgba(251,113,133,0)}}
+  .state{color:var(--dim);font-size:13.5px;min-height:20px}
+  .bubble{width:100%;max-width:460px;border-radius:16px;padding:13px 15px;font-size:15px;line-height:1.6;white-space:pre-wrap}
+  .heard{background:rgba(34,211,238,.09);border:1px solid rgba(34,211,238,.28);color:#a8eefb;min-height:44px}
+  .reply{background:var(--card);border:1px solid var(--line);min-height:90px}
+  .row{display:flex;gap:8px;width:100%;max-width:460px}
+  input{flex:1;background:#0b1119;border:1px solid var(--line);color:var(--txt);padding:12px;border-radius:12px;font-size:14.5px}
+  button.btn{background:var(--card);border:1px solid var(--line);color:var(--txt);padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+
+<h1>Suno Talk</h1>
+<p class="sub">Mic dabao → bolo → jawab. Bas.</p>
+
+<button class="mic" id="mic">🎙️</button>
+<div class="state" id="state">Mic dabao</div>
+
+<div class="bubble heard" id="heard">…</div>
+<div class="bubble reply" id="reply">Bolo, main sun rahi hoon.</div>
+
+<div class="row">
+  <input id="typeIn" placeholder="Ya likh kar bolo…" autocomplete="off" />
+  <button class="btn" id="send">Bhejo</button>
+</div>
+<div class="row">
+  <button class="btn" id="speakBtn" style="flex:1">🔊 Suno</button>
+  <button class="btn" id="stopBtn" style="flex:1">⏹️ Ruko</button>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+const S = { on:false, rec:null, busy:false, speaking:false, voices:[], lastReply:"", restartTimer:null, watchdog:null };
+
+/* ---------- awaaz ---------- */
+function loadVoices(){ try{ S.voices = speechSynthesis.getVoices() || []; }catch(e){ S.voices = []; } }
+loadVoices();
+if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = loadVoices;
+
+function bestVoice(){
+  if (!S.voices.length) loadVoices();
+  const hi = S.voices.filter(v => /^hi/i.test(v.lang || ""));
+  if (hi.length) return hi.find(v => /google|india/i.test(v.name)) || hi[0];
+  return S.voices.find(v => /^en-in/i.test(v.lang || "")) || S.voices[0] || null;
+}
+
+function speak(text){
+  if (!text) return;
+  S.speaking = true;
+  const v = bestVoice();
+  try{ speechSynthesis.cancel(); }catch(e){}
+  const parts = String(text).replace(/\s+/g," ").match(/.{1,160}(\s|$)/g) || [text];
+  parts.forEach((p, i) => {
+    const u = new SpeechSynthesisUtterance(p.trim());
+    u.lang = (v && v.lang) || "hi-IN";
+    u.voice = v || null;
+    u.rate = 1;
+    if (i === parts.length - 1){
+      u.onend = u.onerror = () => { S.speaking = false; if (S.on) setTimeout(startRec, 600); };
+    }
+    speechSynthesis.speak(u);
+  });
+  setTimeout(() => { if (S.speaking && !speechSynthesis.speaking){ S.speaking = false; if (S.on) startRec(); } }, 15000);
+}
+
+/* ---------- sunna ---------- */
+function startRec(){
+  if (!SR || !S.on || S.speaking || S.busy) return;
+  S.busy = true;
+  try{ if (S.rec){ S.rec.onend = null; S.rec.stop(); } }catch(e){}
+  S.rec = new SR();
+  S.rec.lang = "hi-IN";
+  S.rec.continuous = true;
+  S.rec.interimResults = true;
+  S.rec.maxAlternatives = 3;
+
+  let interimTimer = null, interimBuf = "";
+
+  S.rec.onstart = () => { $("state").textContent = "Sun rahi hoon…"; };
+
+  S.rec.onresult = (ev) => {
+    if (S.speaking) return;
+    let finalTxt = "", interim = "";
+    for (let i = ev.resultIndex; i < ev.results.length; i++){
+      const r = ev.results[i];
+      if (r.isFinal) finalTxt += r[0].transcript + " ";
+      else interim += r[0].transcript;
+    }
+    if (interim){
+      interimBuf = interim;
+      $("heard").textContent = interim;
+      clearTimeout(interimTimer);
+      interimTimer = setTimeout(() => {
+        const said = interimBuf.trim();
+        interimBuf = "";
+        if (said.length > 1) handleSaid(said);
+      }, 1200);
+    }
+    if (finalTxt.trim()){
+      clearTimeout(interimTimer);
+      interimBuf = "";
+      handleSaid(finalTxt.trim());
+    }
+  };
+
+  S.rec.onerror = (e) => {
+    const err = e && e.error;
+    if (err === "not-allowed" || err === "service-not-allowed"){
+      S.on = false; paint(); $("state").textContent = "Mic permission nahi mili";
+      return;
+    }
+    S.busy = false;
+    if (S.on) setTimeout(startRec, 600);
+  };
+
+  S.rec.onend = () => {
+    S.busy = false;
+    if (S.on && !S.speaking) setTimeout(startRec, 500);
+  };
+
+  try{ S.rec.start(); }
+  catch(e){ S.busy = false; setTimeout(startRec, 900); return; }
+
+  clearTimeout(S.watchdog);
+  S.watchdog = setTimeout(() => { if (S.on && S.busy){ S.busy = false; try{ startRec(); }catch(e){} } }, 12000);
+}
+
+function stopRec(){
+  clearTimeout(S.restartTimer);
+  clearTimeout(S.watchdog);
+  S.busy = false;
+  try{ if (S.rec){ S.rec.onend = null; S.rec.stop(); } }catch(e){}
+  S.rec = null;
+}
+
+/* ---------- jawab ---------- */
+async function askAI(prompt){
+  const base = "https://text.pollinations.ai/" + encodeURIComponent(prompt) + "?model=openai";
+  const tries = [base,
+    "https://api.allorigins.win/raw?url=" + encodeURIComponent(base),
+    "https://corsproxy.io/?" + encodeURIComponent(base)];
+  for (const u of tries){
+    try{
+      const ctl = new AbortController();
+      const to = setTimeout(() => ctl.abort(), 12000);
+      const r = await fetch(u, { cache: "no-store", signal: ctl.signal });
+      clearTimeout(to);
+      if (!r.ok) continue;
+      const t = (await r.text() || "").trim();
+      if (t.length > 3 && !/^<!doctype|^<html/i.test(t)) return t;
+    }catch(e){}
+  }
+  return null;
+}
+
+function localAnswer(t){
+  const s = String(t || "").toLowerCase();
+  if (/(nam|naam) kya|kaun ho|tum kaun/.test(s)) return "Mera naam Suno hai. Main tumhari assistant hoon.";
+  if (/(kaise ho|kya hal|kya haal|namaste|hello)/.test(s)) return "Main theek hoon. Tum batao, kya chal raha hai?";
+  if (/(time|samay|baje)/.test(s)) return "Abhi " + new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}) + " baje hain.";
+  if (/(date|tareekh)/.test(s)) return "Aaj " + new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"}) + " hai.";
+  if (/(market|nifty|sensex)/.test(s)) return "Market ka live data Seetal Trader app me hai.";
+  return "Main samajh gayi: \"" + String(t).slice(0,50) + "\". Thoda saaf bolo, main dhyan se sun rahi hoon.";
+}
+
+async function handleSaid(said){
+  const txt = String(said || "").trim();
+  if (!txt) return;
+  $("heard").textContent = txt;
+  stopRec();
+  $("state").textContent = "Soch rahi hoon…";
+  $("reply").textContent = "…";
+
+  const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant, thodi girlish aur pyaar wali. '
+    + 'Roman Hindi me 2-3 chhoti line me seedha jawab do, aur aakhir me ek chhota sawal poochho. '
+    + 'Bilkul insaan ki tarah baat karo. Swag ne kaha: "' + txt + '"';
+
+  let ans = null;
+  try{ ans = await askAI(prompt); }catch(e){}
+  const finalText = (ans && ans.trim().length > 5) ? ans.trim() : localAnswer(txt);
+
+  S.lastReply = finalText;
+  $("reply").textContent = finalText;
+  speak(finalText);
+  $("state").textContent = S.on ? "Sun rahi hoon…" : "Mic dabao";
+  if (S.on) setTimeout(startRec, 700);
+}
+
+/* ---------- mic ---------- */
+function paint(){
+  $("mic").classList.toggle("on", S.on);
+  $("mic").textContent = S.on ? "🔴" : "🎙️";
+  $("state").textContent = S.on ? "Sun rahi hoon…" : "Mic dabao";
+}
+
+$("mic").onclick = async () => {
+  if (!SR){ $("state").textContent = "Is browser me voice nahi — Chrome chahiye"; return; }
+  if (S.on){
+    S.on = false; paint(); stopRec();
+    try{ speechSynthesis.cancel(); }catch(e){}
+    return;
+  }
+  try{
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+    st.getTracks().forEach(t => t.stop());
+  }catch(e){
+    $("state").textContent = "Mic permission chahiye — Allow karo";
+    return;
+  }
+  S.on = true; paint();
+  S.busy = false;
+  startRec();
+};
+
+$("send").onclick = () => {
+  const t = ($("typeIn").value || "").trim();
+  if (!t) return;
+  $("typeIn").value = "";
+  handleSaid(t);
+};
+$("typeIn").addEventListener("keydown", (e) => { if (e.key === "Enter") $("send").click(); });
+
+$("speakBtn").onclick = () => { if (S.lastReply) speak(S.lastReply); };
+$("stopBtn").onclick = () => { try{ speechSynthesis.cancel(); }catch(e){} S.speaking = false; };
+
+paint();
+</script>
+</body>
+</html>
