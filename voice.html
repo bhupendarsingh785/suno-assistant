@@ -87,6 +87,7 @@
 </div>
 
 <div class="row">
+  <button class="btn" id="permBtn">🎤 Permission do</button>
   <button class="btn" id="lookBtn" style="display:none">👁️ Dekho</button>
   <button class="btn" id="clearBtn">Nayi baat</button>
 </div>
@@ -182,7 +183,7 @@ function startRec(){
   };
   S.rec.onerror = (e) => {
     if (e && (e.error === "not-allowed" || e.error === "service-not-allowed")){
-      S.on = false; paint(); showPerm("Mic ki permission nahi mili");
+      S.on = false; paint(); showPerm("Mic ki permission nahi mili — Chrome me Allow karo");
     }
   };
   S.rec.onend = () => { if (S.on && !S.speaking){ clearTimeout(S.timer); S.timer = setTimeout(startRec, 350); } };
@@ -290,21 +291,42 @@ if (_pr) _pr.onclick = async () => {
   }
 };
 
+async function askMic(){
+  // getUserMedia hi browser ka "Allow?" popup kholta hai
+  try{
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+    st.getTracks().forEach(t => t.stop());
+    hidePerm();
+    $("state").textContent = "Permission mil gayi — ab mic dabao";
+    return true;
+  }catch(e){
+    showPerm("Mic band hai. " + (e && e.name === "NotAllowedError" ? "Chrome ne mana kiya hai." : ""));
+    return false;
+  }
+}
+
+const _pb = document.getElementById("permBtn");
+if (_pb) _pb.onclick = askMic;
+
 $("mic").onclick = async () => {
   if (!SR){ $("state").textContent = "Is browser me voice nahi — Chrome use karo"; return; }
-  S.on = !S.on;
-  paint();
-  if (S.on){
+
+  if (!S.on){
+    // pehle permission maango (user tap ke turant baad)
+    const okPerm = await askMic();
+    if (!okPerm){ S.on = false; paint(); return; }
+    S.on = true;
+    paint();
     try{ speechSynthesis.cancel(); }catch(e){}
     S.speaking = false;
-    // seedha sunna shuru karo — browser khud permission maangega
     hidePerm();
     startRec();
-    // meter aur camera alag se, mic ko rokte nahi
     try{ Promise.resolve(startMeter()).catch(()=>{}); }catch(e){}
     try{ Promise.resolve(camOn()).catch(()=>{}); }catch(e){}
     $("reply").textContent = "Bolo, main sun rahi hoon.";
   } else {
+    S.on = false;
+    paint();
     stopRec();
     try{ speechSynthesis.cancel(); }catch(e){}
     stopMeter();
