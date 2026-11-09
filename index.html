@@ -168,7 +168,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control</p>
+        <p>Awaaz se phone control · <b id="verTag" style="color:#22d3ee">v4</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -967,7 +967,7 @@ async function handle(raw, _depth){
     addHistory(text,'YouTube search: '+(q||'-')); status('Mic dabao aur bolo'); return;
   }
 
-  const smDev = /(सर्च|खोजो|ढूंढो|खोजें)/.test(t);
+  const smDev = false; // auto-search band - sirf neeche wali saaf command par chalega
   const sm = t.match(/\b(search|dhundo|dhoondo|dhundh|google|khojo)\b/) || (smDev ? ['सर्च'] : null);
   if (sm && (/\b(search|dhundo|dhoondo|dhundh|khojo)\b/.test(t) || smDev)){
     let q = stripWords(text, ['search','karo','kar','do','dhundo','dhoondo','dhundh','google','par','pe','me','mein','khojo','सर्च','खोजो','please','zara','kya','hai','he']);
