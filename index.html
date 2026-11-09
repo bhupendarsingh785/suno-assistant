@@ -2200,6 +2200,51 @@ renderLearn();
   // "Suno" ke baad bhi chup na rahe — agar speaking queue khaali hai to dobara bolo
   window.speakNow = function(txt){ try{ if (typeof say === 'function') say(txt); }catch(e){} };
 })();
+
+/* ================= v43: document se seekho (inject knowledge) ================= */
+(function(){
+  function addUI(){
+    try{
+      const host = document.querySelector('#learnSheet .inner') || document.querySelector('#learnSheet');
+      if (!host || document.getElementById('docTeach')) return;
+      const box = document.createElement('div');
+      box.id = 'docTeach';
+      box.style.cssText = 'margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)';
+      box.innerHTML =
+        '<div class="field"><label>Document ya text se sikhao</label>'
+        + '<div class="s" style="color:#94a3c4;font-size:12px;margin-bottom:6px">Kisi receipt, page ya list ka text paste karo — main uska sabak bana kar yaad rakhungi. (Account number, OTP, password mat daalo.)</div>'
+        + '<textarea id="docText" placeholder="Yahan text paste karo…" style="width:100%;min-height:90px;background:#0b1119;border:1px solid #26324b;color:#eef2fb;border-radius:10px;padding:10px;font-size:13.5px"></textarea></div>'
+        + '<div style="display:flex;gap:8px;margin-top:8px"><button class="btn" id="docLearn" style="flex:1">🧠 Sikhao</button></div>'
+        + '<div id="docOut" class="s" style="margin-top:8px;color:#94a3c4;font-size:12.5px"></div>';
+      host.appendChild(box);
+
+      box.querySelector('#docLearn').onclick = async () => {
+        const out = box.querySelector('#docOut');
+        const raw = String(box.querySelector('#docText').value || '').trim();
+        if (raw.length < 20){ out.textContent = 'Thoda aur text do (kam se kam 20 akshar).'; return; }
+        out.textContent = 'Sabak bana rahi hoon…';
+        const clean = raw.replace(/\b\d{9,18}\b/g, '•••').replace(/\b[A-Z]{4}0[A-Z0-9]{6}\b/g, '•••');
+        let lesson = '';
+        try{
+          const pr = 'Is document/text se ek chhota "sabak" banao jo yaad rakhne layak ho. '
+            + 'Format: 2-4 chhoti line, Hinglish me. Koi account number, OTP ya personal number mat likho. '
+            + 'Sirf ye batao: ye kya document hai, isme kya kya field hote hain, aur isse kya samajh aata hai.\n\n' + clean.slice(0, 2500);
+          lesson = (typeof apiAsk === 'function') ? await apiAsk(pr, 15000) : '';
+        }catch(e){}
+        if (!lesson || lesson.trim().length < 10) lesson = 'Document: ' + clean.slice(0, 160).replace(/\s+/g,' ');
+        try{
+          const mem = JSON.parse(localStorage.getItem('suno_memory_v1') || '[]');
+          mem.unshift({ text: '[sabak] ' + lesson.trim().slice(0, 300), ts: Date.now(), kind: 'doc' });
+          localStorage.setItem('suno_memory_v1', JSON.stringify(mem.slice(0, 100)));
+        }catch(e){}
+        out.textContent = '✅ Yaad rakh liya. Ab jab bhi is tarah ka sawal hoga, ye sabak kaam aayega.';
+        try{ if (typeof say === 'function') say('Sabak yaad rakh liya.'); }catch(e){}
+      };
+    }catch(e){}
+  }
+  document.addEventListener('click', () => setTimeout(addUI, 300));
+  setTimeout(addUI, 1500);
+})();
 </script>
 </body>
 </html>
