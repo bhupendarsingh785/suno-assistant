@@ -1,18 +1,3 @@
-  // ---- open site / browser (phone ka app pehle)
-  const site = findSite(t);
-  const openVerb = /\b(open|kholo|khol|chalao|launch|start|jao)\b/.test(t) || /(खोलो|खोल|चालू|चला|खोलें)/.test(t);
-  if (site && openVerb && !state._voice){
-    const key = (site.name || '').toLowerCase();
-    const used = openApp(key, site.url);
-    reply('📱', site.name, used === 'app'
-      ? 'Phone ka app khol raha hoon. Na khule to web khul jayega.'
-      : 'Khol raha hoon…');
-    say(site.name + ' khol rahi hoon.');
-    addHistory(text, 'Khola: ' + site.name);
-    status('Mic dabao aur bolo');
-    return;
-  }
-
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -393,17 +378,90 @@ if ('speechSynthesis' in window){
   loadVoices();
   window.speechSynthesis.onvoiceschanged = loadVoices;
 }
+/* ---- echo-safe bolna: bolte waqt mic band, baad me dobara chalu ---- */
+let speakingNow = false, lastSaid = '', speakCooldown = 0, speakGen = 0;
+
+function normTxt(s){
+  return String(s||'').toLowerCase().replace(/[^\p{L}\p{M}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim();
+}
+function isEcho(heard){
+  if (speakingNow || Date.now() < speakCooldown) return true;
+  const h = normTxt(heard), s = normTxt(lastSaid);
+  if (!h || !s) return false;
+  if (h.length >= 6 && s.indexOf(h) !== -1) return true;
+  const hw = h.split(' ');
+  if (hw.length < 2) return false;
+  const set = {}; s.split(' ').forEach(w => set[w] = true);
+  let hit = 0; hw.forEach(w => { if (set[w]) hit++; });
+  return hit / hw.length >= 0.7;
+}
+function splitForTTS(text){
+  const clean = String(text||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+  if (!clean) return [];
+  const parts = clean.match(/[^.!?\u0964\n]+[.!?\u0964]?/g) || [clean];
+  const out = []; let cur = '';
+  parts.forEach(p => {
+    p = p.trim(); if (!p) return;
+    if (cur && (cur + ' ' + p).length > 170){ out.push(cur); cur = p; }
+    else cur = cur ? cur + ' ' + p : p;
+  });
+  if (cur) out.push(cur);
+  const fin = [];
+  out.forEach(c => {
+    while (c.length > 200){
+      let cut = c.lastIndexOf(' ', 190); if (cut < 50) cut = 190;
+      fin.push(c.slice(0, cut)); c = c.slice(cut).trim();
+    }
+    if (c) fin.push(c);
+  });
+  return fin;
+}
+function unlockTTS(){
+  try{
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0; window.speechSynthesis.speak(u);
+  }catch(e){}
+}
 function say(text){
   if (!state.speak || !('speechSynthesis' in window)) return;
+  const chunks = splitForTTS(text);
+  if (!chunks.length) return;
   try{
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = state.lang; u.rate = Number(state.rate) || 1; u.pitch = 1;
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const gen = ++speakGen;
+    lastSaid = String(text);
+    speakingNow = true;
+    // mic band karo
+    try{ if (rec){ rec.onend = null; rec.abort(); } }catch(e){}
+    recBusy = false;
+    clearTimeout(micTimer); clearTimeout(window._recWatch);
+    state.listening = false;
+
     const base = state.lang.split('-')[0];
     const v = voices.find(v=>v.lang===state.lang) || voices.find(v=>v.lang && v.lang.split('-')[0]===base);
-    if (v) u.voice = v;
-    window.speechSynthesis.speak(u);
-  }catch(e){}
+
+    const finish = () => {
+      if (gen !== speakGen) return;
+      speakingNow = false;
+      speakCooldown = Date.now() + 900;
+      if (micOn) setTimeout(() => { try{ if (micOn && !speakingNow) runRec(); }catch(e){} }, 700);
+    };
+    const speakChunk = (c) => new Promise(resolve => {
+      const u = new SpeechSynthesisUtterance(c);
+      u.lang = state.lang; u.rate = Number(state.rate) || 1; u.pitch = 1; u.volume = 1;
+      if (v) u.voice = v;
+      let done = false;
+      const timer = setTimeout(end, Math.max(4000, c.length * 150));
+      function end(){ if (done) return; done = true; clearTimeout(timer); resolve(); }
+      u.onend = end; u.onerror = end;
+      synth.speak(u);
+    });
+    let chain = Promise.resolve();
+    chunks.forEach(c => { chain = chain.then(() => (gen === speakGen) ? speakChunk(c) : null); });
+    chain.then(finish, finish);
+  }catch(e){ speakingNow = false; }
 }
 
 /* ============ voice in ============ */
@@ -514,6 +572,7 @@ async function ensureMic(){
 let micOn = false, micTimer = null;
 
 async function startListening(silent){
+  unlockTTS();
   if (!SR){
     status('Is browser me voice support nahi hai — neeche likh kar bhejein', 'err');
     if (!silent) toast('Voice support nahi. Likh kar bhejein.');
@@ -543,6 +602,7 @@ function stopListening(){
 let recBusy = false;
 function runRec(){
   if (!micOn) return;
+  if (speakingNow){ clearTimeout(micTimer); micTimer = setTimeout(runRec, 500); return; }
   if (recBusy) return;
   recBusy = true;
   try{
