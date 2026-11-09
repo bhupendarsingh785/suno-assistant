@@ -1303,7 +1303,7 @@ let alwaysRec = null, alwaysTimer = null, levelCtx = null, levelStream = null, l
 async function startLevelMeter(){
   try{
     if (levelStream) return;
-    levelStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    levelStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
     levelCtx = new (window.AudioContext || window.webkitAudioContext)();
     const src = levelCtx.createMediaStreamSource(levelStream);
     const an = levelCtx.createAnalyser();
@@ -1341,7 +1341,7 @@ function startAlways(){
       alwaysRec.lang = state.lang;
       alwaysRec.continuous = true;
       alwaysRec.interimResults = true;
-      alwaysRec.maxAlternatives = 3;
+      alwaysRec.maxAlternatives = 5;   // dur se bola ho to best match chun sake
       alwaysRec.onresult = (ev) => {
         let finalTxt = '', interim = '';
         for (let i = ev.resultIndex; i < ev.results.length; i++){
@@ -1351,7 +1351,16 @@ function startAlways(){
         }
         if (interim){ $('transcript').textContent = interim; }
         if (finalTxt.trim()){
-          const said = finalTxt.trim();
+          let said = finalTxt.trim();
+          try{
+            const res = ev.results[ev.results.length - 1];
+            if (res && res.length > 1){
+              const alts = [];
+              for (let k = 0; k < res.length; k++) alts.push(res[k].transcript || '');
+              const best = alts.find(a => /(market|nifty|kholo|batao|mausam|time|note|timer|system|trader|builder|doctor|gyan)/i.test(a));
+              if (best) said = best.trim();
+            }
+          }catch(e){}
           $('transcript').textContent = said;
           // bol rahi ho to sunna rok do, jawab do, phir wapas sunna
           try{ window.speechSynthesis.cancel(); }catch(e){}
@@ -1362,10 +1371,10 @@ function startAlways(){
         if (e && (e.error === 'not-allowed' || e.error === 'service-not-allowed')){ state.always = false; LS.set('always', false); paintAlways(); stopAlways(); toast('Mic ki permission nahi mili'); }
       };
       alwaysRec.onend = () => {
-        if (state.always){ clearTimeout(alwaysTimer); alwaysTimer = setTimeout(run, 400); }
+        if (state.always){ clearTimeout(alwaysTimer); alwaysTimer = setTimeout(run, 250); }
       };
       alwaysRec.start();
-      status('Always sun rahi hoon — bolo');
+      status('Always sun rahi hoon — dur se bhi bolo, dheere-dheere saaf');
     }catch(e){
       clearTimeout(alwaysTimer);
       alwaysTimer = setTimeout(run, 1200);
