@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Suno Live — baat karo</title>
+<style>
+  :root{--bg:#0b0f19;--panel:#151c2c;--line:#243049;--txt:#eef2fb;--dim:#93a0bd;--green:#34d399;--red:#f87171;--violet:#6d5efc;--cyan:#22d3ee}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;min-height:100vh;background:radial-gradient(120% 70% at 50% -10%,#1b1f4a 0%,var(--bg) 45%,#070a12 100%);
+       color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans Devanagari",sans-serif;
+       display:flex;flex-direction:column;align-items:center;padding:18px 16px 30px}
+  h1{font-size:18px;margin:0 0 2px}
+  .sub{color:var(--dim);font-size:12.5px;margin:0 0 16px;text-align:center}
+
+  .mic{width:150px;height:150px;border-radius:50%;border:none;cursor:pointer;font-size:44px;
+       background:linear-gradient(135deg,var(--violet),#3b82f6);color:#fff;display:grid;place-items:center;
+       box-shadow:0 14px 40px -12px rgba(109,94,252,.9);transition:.15s}
+  .mic.on{background:linear-gradient(135deg,#f87171,#fbbf24);animation:pulse 1.2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(248,113,113,.6)}70%{box-shadow:0 0 0 22px rgba(248,113,113,0)}100%{box-shadow:0 0 0 0 rgba(248,113,113,0)}}
+
+  .state{margin:12px 0 6px;font-size:13.5px;color:var(--dim)}
+  .level{width:220px;height:7px;border-radius:99px;background:#1a2432;overflow:hidden;margin-bottom:12px}
+  .level i{display:block;height:100%;width:0;background:linear-gradient(90deg,#34d399,#fbbf24,#f87171);transition:width .08s}
+
+  .say{width:100%;max-width:520px;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.3);
+       border-radius:14px;padding:11px 13px;font-size:14px;min-height:46px;margin-bottom:10px;color:var(--cyan)}
+  .reply{width:100%;max-width:520px;background:var(--panel);border:1px solid var(--line);border-radius:16px;
+         padding:14px;font-size:15px;line-height:1.6;min-height:80px;white-space:pre-wrap}
+  .row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;justify-content:center}
+  .btn{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:10px 15px;border-radius:11px;
+       font-size:13.5px;font-weight:700;cursor:pointer}
+  .btn.on{border-color:rgba(52,211,153,.6);color:var(--green)}
+  video{width:160px;border-radius:14px;border:1px solid var(--line);background:#000;display:none;margin-bottom:10px}
+  video.on{display:block}
+</style>
+</head>
+<body>
+
+<h1>Suno Live</h1>
+<p class="sub">Ek baar mic dabao — phir baat karte raho. Band karne ke liye dobara dabao.</p>
+
+<video id="cam" autoplay playsinline muted></video>
+
+<button class="mic" id="mic">🎙️</button>
+<div class="state" id="state">Mic dabao</div>
+<div class="level"><i id="lvl"></i></div>
+
+<div class="say" id="heard">…</div>
+<div class="reply" id="reply">Bolo, main sun rahi hoon.</div>
+
+<div class="row">
+  <button class="btn" id="camBtn">📷 Camera</button>
+  <button class="btn" id="lookBtn" style="display:none">👁️ Dekho</button>
+  <button class="btn" id="clearBtn">Saaf</button>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+const S = {
+  on: false, rec: null, timer: null, speaking: false,
+  lastSpoken: "", stream: null, camStream: null, voices: [],
+};
+
+/* ---------- awaaz ---------- */
+function loadVoices(){ try{ S.voices = speechSynthesis.getVoices() || []; }catch(e){ S.voices = []; } }
+loadVoices();
+if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = loadVoices;
+
+function bestVoice(){
+  if (!S.voices.length) loadVoices();
+  const hi = S.voices.filter(v => /^hi/i.test(v.lang || ""));
+  if (hi.length) return hi.find(v => /google|india/i.test(v.name)) || hi[0];
+  return S.voices.find(v => /^en-in/i.test(v.lang || "")) || S.voices.find(v => /^en/i.test(v.lang || "")) || S.voices[0] || null;
+}
+
+function speak(text){
+  if (!text || !('speechSynthesis' in window)) return;
+  S.speaking = true;
+  S.lastSpoken = String(text).slice(0, 400);
+  stopRec();                       // bolne se pehle mic band
+  const v = bestVoice();
+  const parts = String(text).replace(/\s+/g," ").match(/.{1,160}(\s|$)/g) || [text];
+  parts.forEach((p, i) => {
+    const u = new SpeechSynthesisUtterance(p.trim());
+    u.lang = (v && v.lang) || "hi-IN";
+    u.voice = v || null;
+    u.rate = 1;
+    if (i === parts.length - 1){
+      u.onend = () => { S.speaking = false; if (S.on) setTimeout(startRec, 700); };
+      u.onerror = () => { S.speaking = false; if (S.on) setTimeout(startRec, 700); };
+    }
+    speechSynthesis.speak(u);
+  });
+  // watchdog: agar onend na aaye
+  setTimeout(() => { if (S.speaking && !speechSynthesis.speaking && !speechSynthesis.pending){ S.speaking = false; if (S.on) startRec(); } }, 12000);
+}
+
+/* ---------- sunna ---------- */
+function startRec(){
+  if (!SR || !S.on || S.speaking) return;
+  try{ if (S.rec) S.rec.stop(); }catch(e){}
+  S.rec = new SR();
+  S.rec.lang = "hi-IN";
+  S.rec.continuous = true;
+  S.rec.interimResults = true;
+  S.rec.maxAlternatives = 3;
+
+  S.rec.onstart = () => { $("state").textContent = "Sun rahi hoon…"; };
+
+  S.rec.onresult = (ev) => {
+    if (S.speaking) return;
+    let finalTxt = "", interim = "";
+    for (let i = ev.resultIndex; i < ev.results.length; i++){
+      const r = ev.results[i];
+      if (r.isFinal) finalTxt += r[0].transcript + " ";
+      else interim += r[0].transcript;
+    }
+    if (interim) $("heard").textContent = interim;
+    if (!finalTxt.trim()) return;
+
+    const said = finalTxt.trim();
+    $("heard").textContent = said;
+
+    // apne hi shabd? ignore
+    const a = said.toLowerCase().replace(/\s+/g," ");
+    const b = S.lastSpoken.toLowerCase().replace(/\s+/g," ");
+    if (b && a.length > 6 && b.includes(a.slice(0, Math.min(20, a.length)))) return;
+    // ek shabd ka shor? ignore
+    if (said.split(/\s+/).length < 2) return;
+
+    answer(said);
+  };
+
+  S.rec.onerror = (e) => {
+    if (e && (e.error === "not-allowed" || e.error === "service-not-allowed")){
+      S.on = false; paint(); $("state").textContent = "Mic ki permission nahi mili";
+    }
+  };
+
+  S.rec.onend = () => { if (S.on && !S.speaking){ clearTimeout(S.timer); S.timer = setTimeout(startRec, 350); } };
+
+  try{ S.rec.start(); }catch(e){ clearTimeout(S.timer); S.timer = setTimeout(startRec, 900); }
+}
+
+function stopRec(){
+  clearTimeout(S.timer);
+  try{ if (S.rec){ S.rec.onend = null; S.rec.stop(); } }catch(e){}
+  S.rec = null;
+}
+
+/* ---------- jawab ---------- */
+async function askAI(prompt){
+  const base = "https://text.pollinations.ai/" + encodeURIComponent(prompt) + "?model=openai";
+  const tries = [base,
+    "https://api.allorigins.win/raw?url=" + encodeURIComponent(base),
+    "https://corsproxy.io/?" + encodeURIComponent(base)];
+  for (const u of tries){
+    try{
+      const r = await fetch(u, { cache: "no-store" });
+      if (!r.ok) continue;
+      const t = (await r.text() || "").trim();
+      if (t.length > 3) return t;
+    }catch(e){}
+  }
+  return null;
+}
+
+async function answer(said){
+  stopRec();
+  $("state").textContent = "Soch rahi hoon…";
+  $("reply").textContent = "…";
+  const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant. Roman Hindi me, 2-3 chhoti line me, seedha jawab do. '
+    + 'Lecture mat do. Agar market ka sawal ho to "market kaisa hai" bolne se live data milta hai. '
+    + 'User ne kaha: "' + said + '"';
+  const t = await askAI(prompt);
+  if (t){
+    $("reply").textContent = t.trim();
+    speak(t.trim());
+  } else {
+    $("reply").textContent = "Jawab nahi aa paya — net check karo.";
+    speak("Jawab nahi aa paya.");
+  }
+  $("state").textContent = S.on ? "Sun rahi hoon…" : "Mic dabao";
+}
+
+/* ---------- camera ---------- */
+async function camOn(){
+  try{
+    S.camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+    $("cam").srcObject = S.camStream;
+    $("cam").classList.add("on");
+    $("lookBtn").style.display = "inline-block";
+    $("camBtn").classList.add("on");
+    return true;
+  }catch(e){ $("state").textContent = "Camera permission nahi mili"; return false; }
+}
+function camOff(){
+  try{ if (S.camStream) S.camStream.getTracks().forEach(t => t.stop()); }catch(e){}
+  S.camStream = null;
+  $("cam").classList.remove("on");
+  $("lookBtn").style.display = "none";
+  $("camBtn").classList.remove("on");
+}
+$("camBtn").onclick = () => { S.camStream ? camOff() : camOn(); };
+
+$("lookBtn").onclick = async () => {
+  const v = $("cam");
+  if (!v.videoWidth){ $("reply").textContent = "Camera taiyaar nahi — ek second baad dabao."; return; }
+  const c = document.createElement("canvas");
+  c.width = 640; c.height = Math.round(640 * v.videoHeight / v.videoWidth);
+  c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+  $("reply").textContent = "Photo le li. Dekhne ke liye Gemini key chahiye (Settings me daalo) — abhi main sirf camera dikha sakti hoon.";
+  speak("Camera chal raha hai. Dekhne ke liye Gemini key chahiye.");
+};
+
+/* ---------- mic ---------- */
+function paint(){
+  $("mic").classList.toggle("on", S.on);
+  $("mic").textContent = S.on ? "🔴" : "🎙️";
+  $("state").textContent = S.on ? "Sun rahi hoon…" : "Mic dabao";
+}
+
+$("mic").onclick = async () => {
+  if (!SR){ $("state").textContent = "Is browser me voice nahi — Chrome use karo"; return; }
+  S.on = !S.on;
+  paint();
+  if (S.on){
+    try{ speechSynthesis.cancel(); }catch(e){}
+    S.speaking = false;
+    await startMeter();
+    startRec();
+    $("reply").textContent = "Bolo, main sun rahi hoon.";
+  } else {
+    stopRec();
+    try{ speechSynthesis.cancel(); }catch(e){}
+    stopMeter();
+    camOff();
+  }
+};
+
+$("clearBtn").onclick = () => { $("heard").textContent = "…"; $("reply").textContent = "Bolo, main sun rahi hoon."; };
+
+/* ---------- level meter ---------- */
+let actx = null, raf = null;
+async function startMeter(){
+  try{
+    S.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true } });
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = actx.createMediaStreamSource(S.stream);
+    const an = actx.createAnalyser(); an.fftSize = 512; src.connect(an);
+    const buf = new Uint8Array(an.frequencyBinCount);
+    const loop = () => {
+      an.getByteFrequencyData(buf);
+      let s = 0; for (let i=0;i<buf.length;i++) s += buf[i];
+      const pct = Math.min(100, Math.round((s / buf.length) * 2.4));
+      $("lvl").style.width = pct + "%";
+      raf = requestAnimationFrame(loop);
+    };
+    loop();
+  }catch(e){}
+}
+function stopMeter(){
+  try{ if (raf) cancelAnimationFrame(raf); }catch(e){}
+  try{ if (S.stream) S.stream.getTracks().forEach(t => t.stop()); }catch(e){}
+  S.stream = null;
+}
+
+paint();
+</script>
+</body>
+</html>
