@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v30</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v31</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -441,14 +441,16 @@ function buildRec(){
         if (!final && interimBuf.trim().length > 1){
           const said = interimBuf.trim();
           interimBuf = '';
+          if (isEcho(said)) return;
           $('transcript').textContent = said;
           try{ handle(said); }catch(e){}
         }
-      }, 1400);
+      }, 900);
     }
     if (final){
       clearTimeout(interimTimer);
       interimBuf = '';
+      if (isEcho(final)) return;
       markWorking();
       $('transcript').textContent = final;
       try{
@@ -514,6 +516,7 @@ async function startListening(silent){
     if (!ok) return;
   }
   micOn = true;
+  keepScreenAwake();
   runRec();
 }
 
