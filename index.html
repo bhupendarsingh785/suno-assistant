@@ -1016,7 +1016,17 @@ async function handle(raw, _depth){
     status('Mic dabao aur bolo'); return;
   }
 
-  // ---- AI se seedha jawab (agar key lagi hai) - sabse pehle yahi try hota hai
+  // ---- khud ke bare me sawal (apna gyan)
+  const selfAns = selfAnswer(t);
+  if (selfAns){
+    reply('🤖', SELF.naam + ' ' + SELF.version, escapeHtml(selfAns).replace(/\n/g,'<br>'));
+    say(selfAns.replace(/\n/g,' ').slice(0, 400));
+    addHistory(text,'Apne bare me bataya');
+    status('Mic dabao aur bolo');
+    return;
+  }
+
+  // ---- AI se seedha jawab
   if (!state._aiBusy){
     state._aiBusy = true;
     const ans = await aiChat(text);
@@ -1290,6 +1300,73 @@ function docShowErrors(){
   const b = $('errClear'); if (b) b.onclick = ()=>{ try{ localStorage.removeItem('suno_errors'); }catch(e){} toast('Log saaf'); };
 }
 
+/* ================= khud ka gyan (self-knowledge) ================= */
+const SELF = {
+  naam: 'Suno',
+  version: 'v4',
+  kisne: 'Swag (bhupendarsingh785) ke liye Seetal ne banaya — ek AI dost',
+  files: [
+    'index.html — poora app (UI, awaaz, commands, market, settings)',
+    'sw.js — offline cache (net band ho to bhi khule)',
+    'manifest.webmanifest — phone me app ki tarah install hone ke liye',
+    'portal.html — mirror links jaanch kar koi ek chalu karta hai'
+  ],
+  kaam: [
+    'awaaz se sunna (mic) aur bol kar jawab dena',
+    'browser/site kholna, Google aur YouTube par search',
+    'call dial karna, WhatsApp aur SMS draft bhejna',
+    'maps me rasta dikhana',
+    'mausam batana (Open-Meteo se)',
+    'notes rakhna aur dikhana',
+    'timer aur in-app alarm',
+    'market: Nifty, Sensex, Reliance jaisa live data Seetal Trader se lana',
+    'pichhle kaam ki history',
+    'Doctor — apni jaanch aur error log',
+    'Settings — bhasha, awaaz, AI, mirror links, backup'
+  ],
+  data: 'Sab kuch phone ke andar (localStorage) rehta hai — notes, contacts, history, settings. Koi server nahi, koi account nahi.',
+  dimaag: 'Commands ke liye rules, aur samajhne ke liye AI — pehle free dimaag (bina key), chaho to apni Google Gemini ya OpenAI key.',
+  limit: [
+    'WiFi/Bluetooth on-off nahi kar sakta',
+    'doosre apps khud nahi khol sakta (sirf browser link)',
+    'bina tap call nahi laga sakta',
+    'background me hamesha nahi sunta (screen on rakhna padta hai)',
+    'system alarm nahi, apna in-app alarm hai'
+  ],
+  links: {
+    trader: 'https://bhupendarsingh785.github.io/seetal-trader/',
+    vault: 'https://bhupendarsingh785.github.io/seetal-trader/vault.html',
+    backup: 'https://seetal-trader.netlify.app/'
+  }
+};
+
+function selfAnswer(t){
+  const has = (re) => re.test(t);
+  if (has(/kitni file|kaunsi file|files kya|code kya|andar kya hai|kya kya code/)){
+    return 'Mere andar ' + SELF.files.length + ' file hain:\n• ' + SELF.files.join('\n• ');
+  }
+  if (has(/kya kar sakti|kya kar sakta|features|kaam kya|kya kya kar/)){
+    return 'Main ye sab kar sakti hoon:\n• ' + SELF.kaam.join('\n• ');
+  }
+  if (has(/kaise chalti|kaise chalta|kaise kaam|how do you work/)){
+    return SELF.naam + ' ' + SELF.version + ' — ' + SELF.dimaag + ' ' + SELF.data;
+  }
+  if (has(/limit|nahi kar sakti|nahi kar sakta|kya nahi/)){
+    return 'Ye main nahi kar sakti:\n• ' + SELF.limit.join('\n• ');
+  }
+  if (has(/kaun banaya|kisne banaya|tumhara malik|owner|kiska app/)){
+    return 'Mujhe ' + SELF.kisne + ' ne banaya hai.';
+  }
+  if (has(/tum kaun|kaun ho tum|tumhara naam|apne bare me|khud ke bare/)){
+    return 'Main ' + SELF.naam + ' hoon (' + SELF.version + ') — ' + SELF.kisne + ' ne banaya. ' + SELF.dimaag;
+  }
+  if (has(/data kahan|mera data|privacy|kahan save/)){
+    return SELF.data;
+  }
+  return null;
+}
+
+
 /* ================= optional AI samajhne wala ================= */
 function mapAiCmd(cmd){
   const c = String(cmd||'').trim();
@@ -1342,6 +1419,9 @@ async function aiChat(text){
     + 'Roman Hindi me, 2-3 chhoti line me, seedha aur pyaar se jawab do. Lecture mat do. '
     + 'Agar sawal market/shares ka ho to bolo ki "market kaisa hai" ya "Reliance kaisa hai" bolne se live data mil jayega. '
     + 'Agar kuch karna ho (kholna, search, call, note, timer) to saaf bata do kaise bolein. '
+    + 'Tumhara app "Suno v4" hai: mic se sunta hai, browser/search/call/whatsapp/sms/maps, mausam, notes, timer, '
+    + 'market live data (Seetal Trader se), history, Doctor, Settings. Data phone me hi rehta hai. '
+    + 'WiFi/BT on-off, dusre apps kholna, bina tap call — ye nahi kar sakta. '
     + 'User ne kaha: "' + text + '"';
   try{
     // koi key nahi? to free (bina key) dimaag use karo
