@@ -195,6 +195,11 @@
     <div class="sub" style="text-align:center;margin-top:4px" id="levelTxt">Awaaz ka level</div>
   </div>
 
+  <div id="camWrap" style="max-width:280px;margin:0 auto 10px;display:none">
+    <video id="camView" autoplay playsinline muted style="width:100%;border-radius:14px;border:1px solid var(--line);background:#000"></video>
+    <button id="camLook" class="btn ghost" style="width:100%;margin-top:6px;padding:9px;border-radius:11px;font-size:13px">👁️ Mujhe dekho</button>
+  </div>
+
   <div class="transcript" id="transcript">Jaise: <b>“YouTube kholo”</b>, <b>“call karo 98765…”</b>, <b>“mausam batao”</b></div>
 
   <div class="card" id="replyCard">
@@ -1088,6 +1093,16 @@ async function handle(raw, _depth){
     addHistory(text,'Browser open'); status('Mic dabao aur bolo'); return;
   }
 
+  // ---- feelings: mood padho, pehle uska naam lo
+  const sadRe = /(udaas|dukhi|pareshan|tension|thak|bore|akela|rona|bura lag|mann nahi|depress|stress)/;
+  const happyRe = /(khush|maza|acha laga|badhiya|great|shukriya|thanks|love|pyaar)/;
+  if (sadRe.test(t) && !/^(market|nifty)/.test(t)){
+    state._mood = 'sad';
+    const line = 'Sun rahi hoon. ' + (state.aiKey ? '' : 'Batao kya hua — main yahin hoon.');
+    if (!state.aiKey){ reply('🫂','Main yahin hoon', 'Jo bhi ho raha hai, batao. Main sunti hoon.'); say('Main yahin hoon. Batao kya hua.'); status('Mic dabao aur bolo'); return; }
+  }
+  if (happyRe.test(t)) state._mood = 'happy';
+
   // ---- chhoti-moti baatein (small talk)
   if (/(kaise ho|kaisa hai tu|kya haal|hello|hi suno|namaste)/.test(t)){
     reply('😊','Main bilkul theek hoon', 'Bolo, kya karna hai?');
@@ -1186,6 +1201,68 @@ if (_btnSpeak) _btnSpeak.onclick = ()=>{
   say(t);
   state.speak = was;
 };
+/* ================= camera (vision) ================= */
+let camStream = null;
+async function camStart(){
+  try{
+    if (camStream) return true;
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+    const v = $('camView');
+    if (v){ v.srcObject = camStream; }
+    $('camWrap').style.display = 'block';
+    return true;
+  }catch(e){
+    $('camWrap').style.display = 'none';
+    toast('Camera ki permission nahi mili');
+    return false;
+  }
+}
+function camStop(){
+  try{ if (camStream) camStream.getTracks().forEach(t => t.stop()); }catch(e){}
+  camStream = null;
+  $('camWrap').style.display = 'none';
+}
+
+async function camLook(){
+  if (!camStream){ const ok = await camStart(); if (!ok) return; }
+  const v = $('camView');
+  if (!v || !v.videoWidth){ reply('📷','Camera taiyaar nahi', 'Ek second ruk kar dobara dabao.'); say('Camera taiyaar nahi.'); return; }
+  const c = document.createElement('canvas');
+  c.width = 640; c.height = Math.round(640 * v.videoHeight / v.videoWidth);
+  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  const b64 = c.toDataURL('image/jpeg', 0.7).split(',')[1];
+
+  // Gemini key ho to vision chalta hai
+  if (state.aiProvider === 'gemini' && state.aiKey){
+    reply('👁️','Dekh rahi hoon…', '');
+    say('Ek second, dekhti hoon.');
+    try{
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + (state.aiModel || 'gemini-2.0-flash') + ':generateContent?key=' + encodeURIComponent(state.aiKey);
+      const body = JSON.stringify({ contents: [{ parts: [
+        { text: 'Tum Suno ho — Swag ki Hinglish dost. Is photo me jo dikh raha hai, 2-3 line me Hinglish me batao. Agar koi insaan hai to uska mood/expression batao (khush, udaas, thaka, gussa). Chhota rakho, pyaar se.' },
+        { inline_data: { mime_type: 'image/jpeg', data: b64 } }
+      ] }] });
+      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+      const j = await r.json();
+      if (j.error) throw new Error(j.error.message || 'vision fail');
+      const txt = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts[0].text;
+      if (!txt) throw new Error('khaali');
+      reply('👁️','Main dekhti hoon', escapeHtml(txt).replace(/\n/g,'<br>'));
+      say(txt);
+      return;
+    }catch(e){
+      reply('👁️','Dekh nahi payi', escapeHtml(String(e.message||e)).slice(0,120));
+      say('Dekh nahi payi. Settings me Gemini key check karo.');
+      return;
+    }
+  }
+
+  // key nahi hai — imandari se batao
+  reply('👁️','Dekhne ke liye key chahiye', 'Camera chal raha hai, par photo samajhne ke liye ek AI chahiye. Settings → Google Gemini → apni free key daal do, phir main tumhe dekh kar bata sakungi.');
+  say('Camera chal raha hai. Par dekhne ke liye Gemini key chahiye — Settings me daal do.');
+}
+$('camLook').onclick = camLook;
+
 /* ================= always-on listening ================= */
 state.always = LS.get('always', false);
 const alwaysBtn = $('alwaysBtn');
@@ -1201,11 +1278,13 @@ alwaysBtn.onclick = async () => {
   LS.set('always', state.always);
   paintAlways();
   if (state.always){
-    toast('Always-on chalu — ab tak sunti rahegi jab tak band na karo');
+    toast('Always-on chalu — sun rahi hoon, dekh bhi rahi hoon');
     startAlways();
+    camStart();
   } else {
     stopAlways();
-    toast('Always-on band');
+    camStop();
+    toast('Always-on band — sunna aur dekhna dono band');
   }
 };
 
@@ -1727,7 +1806,7 @@ async function aiChat(text){
     + 'Tumhara app "Suno v4" hai: mic se sunta hai, browser/search/call/whatsapp/sms/maps, mausam, notes, timer, '
     + 'market live data (Seetal Trader se), history, Doctor, Settings. Data phone me hi rehta hai. '
     + 'WiFi/BT on-off, dusre apps kholna, bina tap call — ye nahi kar sakta. '
-    + 'User ne kaha: "' + text + '"';
+    + 'User ne kaha: "' + text + '"' + (state._mood === 'sad' ? ' (User udaas lag raha hai — pehle feeling ko naam do, phir baat karo. Lecture mat do.)' : '') + '';
   try{
     // koi key nahi? to free (bina key) dimaag use karo
     if (!state.aiKey || state.aiProvider === 'none'){
