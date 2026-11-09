@@ -69,6 +69,14 @@
   <div class="level"><i id="lvl"></i></div>
 </div>
 
+<div id="permBox" style="display:none;width:100%;max-width:420px;background:rgba(251,113,133,.1);
+     border:1px solid rgba(251,113,133,.45);border-radius:16px;padding:13px 15px;font-size:13.5px;line-height:1.6;color:#ffd0d8">
+  <b>Mic ki permission band hai.</b><br>
+  Chrome me: address bar ke paas <b>🔒 / ⚙️</b> icon → <b>Permissions</b> → <b>Microphone</b> → <b>Allow</b> → phir page reload karo.
+  <br><br>
+  <button class="btn" id="permRetry" style="margin-top:4px">Dobara koshish karo</button>
+</div>
+
 <div class="bubble heard" id="heard">…</div>
 <div class="bubble reply" id="reply">Bolo, main sun rahi hoon.</div>
 
@@ -168,7 +176,7 @@ function startRec(){
   };
   S.rec.onerror = (e) => {
     if (e && (e.error === "not-allowed" || e.error === "service-not-allowed")){
-      S.on = false; paint(); $("state").textContent = "Mic ki permission nahi mili";
+      S.on = false; paint(); showPerm("Mic ki permission nahi mili");
     }
   };
   S.rec.onend = () => { if (S.on && !S.speaking){ clearTimeout(S.timer); S.timer = setTimeout(startRec, 350); } };
@@ -257,6 +265,24 @@ function paint(){
   if (chip){ chip.textContent = S.on ? "LIVE" : "Band"; chip.className = "chip" + (S.on ? " live" : ""); }
 }
 
+function showPerm(msg){
+  const b = $("permBox");
+  if (b) b.style.display = "block";
+  $("state").textContent = msg || "Mic ki permission nahi mili";
+}
+function hidePerm(){ const b = $("permBox"); if (b) b.style.display = "none"; }
+const _pr = document.getElementById("permRetry");
+if (_pr) _pr.onclick = async () => {
+  try{
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+    st.getTracks().forEach(t => t.stop());
+    hidePerm();
+    $("state").textContent = "Permission mil gayi — ab mic dabao";
+  }catch(e){
+    showPerm("Abhi bhi permission nahi mili — Chrome settings me Allow karo");
+  }
+};
+
 $("mic").onclick = async () => {
   if (!SR){ $("state").textContent = "Is browser me voice nahi — Chrome use karo"; return; }
   S.on = !S.on;
@@ -264,6 +290,19 @@ $("mic").onclick = async () => {
   if (S.on){
     try{ speechSynthesis.cancel(); }catch(e){}
     S.speaking = false;
+    // pehle mic permission — bina iske kuch nahi chalega
+    let micOk = false;
+    try{
+      const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+      st.getTracks().forEach(t => t.stop());
+      micOk = true;
+    }catch(e){ micOk = false; }
+    if (!micOk){
+      S.on = false; paint(); showPerm();
+      $("reply").textContent = "Mic ki permission chahiye — upar likha hai kaise dena hai. Uske baad dobara dabao.";
+      return;
+    }
+    hidePerm();
     await startMeter();
     await camOn();
     startRec();
