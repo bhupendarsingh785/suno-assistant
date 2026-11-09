@@ -1,3 +1,18 @@
+  // ---- open site / browser (phone ka app pehle)
+  const site = findSite(t);
+  const openVerb = /\b(open|kholo|khol|chalao|launch|start|jao)\b/.test(t) || /(खोलो|खोल|चालू|चला|खोलें)/.test(t);
+  if (site && openVerb){
+    const key = (site.name || '').toLowerCase();
+    const used = openApp(key, site.url);
+    reply('📱', site.name, used === 'app'
+      ? 'Phone ka app khol raha hoon. Na khule to web khul jayega.'
+      : 'Khol raha hoon…');
+    say(site.name + ' khol rahi hoon.');
+    addHistory(text, 'Khola: ' + site.name);
+    status('Mic dabao aur bolo');
+    return;
+  }
+
 <!DOCTYPE html>
 <html lang="hi">
 <head>
@@ -150,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v20</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v21</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -179,6 +194,9 @@
         <b id="replyTitle">Namaste!</b>
         <span id="replyText">Main aapke phone par browser khol sakta hoon, search kar sakta hoon, call dial kar sakta hoon, WhatsApp/SMS bhej sakta hoon, map khol sakta hoon, notes aur timer rakh sakta hoon. Neeche koi bhi example dabao.</span>
       </div>
+    </div>
+    <div style="margin-top:10px">
+      <button class="btn ghost" id="speakReply" style="padding:8px 14px;border-radius:11px;font-size:13px">🔊 Suno</button>
     </div>
     <div class="timerbar" id="timerBar">⏱️ <span id="timerLeft" class="t">--:--</span> <span id="timerWhat" style="color:var(--muted)"></span>
       <button class="iconbtn" id="timerCancel" style="margin-left:auto;width:auto;padding:0 10px;height:30px;font-size:11.5px">Cancel</button>
@@ -599,6 +617,45 @@ function stripWords(s, words){
 
 function openUrl(url){ window.open(url, '_blank', 'noopener'); }
 
+/* ---- phone ke asli app kholna (Chrome nahi) ---- */
+const APP_LINKS = {
+  'whatsapp':   { app: 'whatsapp://send',            web: 'https://web.whatsapp.com' },
+  'instagram':  { app: 'instagram://app',            web: 'https://www.instagram.com' },
+  'facebook':   { app: 'fb://',                      web: 'https://m.facebook.com' },
+  'youtube':    { app: 'vnd.youtube://',             web: 'https://m.youtube.com' },
+  'telegram':   { app: 'tg://',                      web: 'https://web.telegram.org' },
+  'maps':       { app: 'geo:0,0?q=',                 web: 'https://maps.google.com' },
+  'gmail':      { app: 'mailto:',                    web: 'https://mail.google.com' },
+  'paytm':      { app: 'paytmmp://',                 web: 'https://paytm.com' },
+  'phonepe':    { app: 'phonepe://',                 web: 'https://www.phonepe.com' },
+  'swiggy':     { app: 'swiggy://',                  web: 'https://www.swiggy.com' },
+  'zomato':     { app: 'zomato://',                  web: 'https://www.zomato.com' },
+  'amazon':     { app: 'com.amazon.mobile.shopping://', web: 'https://www.amazon.in' },
+  'flipkart':   { app: 'flipkart://',                web: 'https://www.flipkart.com' }
+};
+
+/* pehle phone ka app, na khule to web */
+function openApp(key, fallbackUrl, query){
+  const entry = APP_LINKS[key];
+  if (!entry){ openUrl(fallbackUrl); return 'web'; }
+  const appUrl = entry.app + (query ? encodeURIComponent(query) : '');
+  const started = Date.now();
+  let left = false;
+  const onHide = () => { left = true; };
+  document.addEventListener('visibilitychange', onHide, { once: true });
+
+  try{ window.location.href = appUrl; }catch(e){}
+
+  setTimeout(() => {
+    document.removeEventListener('visibilitychange', onHide);
+    // agar page abhi bhi saamne hai (app nahi khula) to web khol do
+    if (!left && !document.hidden && Date.now() - started < 3000){
+      openUrl(fallbackUrl);
+    }
+  }, 1200);
+  return 'app';
+}
+
 function addHistory(cmd, result){
   state.history.unshift({ cmd, result, ts: Date.now() });
   state.history = state.history.slice(0,40);
@@ -1006,6 +1063,15 @@ async function handle(raw, _depth){
 
 /* ============ UI wiring ============ */
 $('mic').onclick = ()=>{ if (micOn) stopListening(); else startListening(); };
+
+const _sr = document.getElementById('speakReply');
+if (_sr) _sr.onclick = () => {
+  const txt = ($('replyText').textContent || '').trim();
+  if (!txt) return;
+  const was = state.speak; state.speak = true;
+  say(txt);
+  state.speak = was;
+};
 
 /* ---- mic ka poora check: asli wajah batayega ---- */
 const _mc = document.getElementById('micCheck');
