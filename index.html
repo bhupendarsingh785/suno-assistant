@@ -2245,6 +2245,28 @@ renderLearn();
   document.addEventListener('click', () => setTimeout(addUI, 300));
   setTimeout(addUI, 1500);
 })();
+
+/* ================= v44: mirror links khud bhar do ================= */
+(function(){
+  const DEFAULTS = [
+    'https://bhupendarsingh785.github.io/suno-assistant/',
+    'https://seetal-trader.netlify.app/',
+    'https://bhupendarsingh785.vercel.app/'
+  ];
+  function fill(){
+    try{
+      let cur = [];
+      try{ cur = JSON.parse(localStorage.getItem('mirrors') || '[]'); }catch(e){}
+      if (!Array.isArray(cur)) cur = [];
+      if (!cur.length){
+        localStorage.setItem('mirrors', JSON.stringify(DEFAULTS));
+        if (typeof state === 'object' && state) state.mirrors = DEFAULTS.slice();
+        try{ if (typeof toast === 'function') toast('Mirror links bhar diye (3)'); }catch(e){}
+      }
+    }catch(e){}
+  }
+  setTimeout(fill, 1200);
+})();
 </script>
 </body>
 </html>
