@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v32</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v33</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -443,7 +443,7 @@ function buildRec(){
           interimBuf = '';
           if (isEcho(said)) return;
           $('transcript').textContent = said;
-          try{ handle(said); }catch(e){}
+          speakReplySafe(said);
         }
       }, 900);
     }
@@ -453,12 +453,7 @@ function buildRec(){
       if (isEcho(final)) return;
       markWorking();
       $('transcript').textContent = final;
-      try{
-        handle(final);
-      }catch(err){
-        reply('⚠️','Andar dikkat', escapeHtml(String(err && err.message || err)).slice(0,140));
-        status('Dikkat aayi — likh kar bhejo', 'err');
-      }
+      speakReplySafe(final);
     }
   };
   r.onerror = (ev) => {
@@ -479,10 +474,30 @@ function buildRec(){
   r.onend = () => {
     const wasListening = state.listening;
     stopUI();
-    if (wasListening && state.auto) setTimeout(()=>startListening(true), 450);
+    if (micOn) setTimeout(()=>{ try{ if (micOn) runRec(); }catch(e){} }, 450);
+    else if (wasListening && state.auto) setTimeout(()=>startListening(true), 450);
   };
   return r;
 }
+function speakReplySafe(said){
+  const before = ($('replyText') ? $('replyText').textContent : '');
+  try{ handle(said); }catch(err){
+    reply('⚠️','Andar dikkat', escapeHtml(String(err && err.message || err)).slice(0,140));
+    return;
+  }
+  // 1.2 second baad bhi jawab nahi aaya to local se de do
+  setTimeout(() => {
+    const now = ($('replyText') ? $('replyText').textContent : '');
+    if (now === before || !now.trim() || now.trim() === 'Bolo, main sun rahi hoon.'){
+      const t = localAnswer(said);
+      reply('💬','Suno', escapeHtml(t).replace(/\n/g,'<br>'));
+      say(t);
+    }
+    // jawab ke baad mic chalu rakho
+    if (micOn && !state.listening){ setTimeout(()=>{ try{ if (micOn) runRec(); }catch(e){} }, 500); }
+  }, 1200);
+}
+
 function stopUI(){
   state.listening = false;
   $('mic').classList.remove('listening');
