@@ -290,22 +290,12 @@ $("mic").onclick = async () => {
   if (S.on){
     try{ speechSynthesis.cancel(); }catch(e){}
     S.speaking = false;
-    // pehle mic permission — bina iske kuch nahi chalega
-    let micOk = false;
-    try{
-      const st = await navigator.mediaDevices.getUserMedia({ audio: true });
-      st.getTracks().forEach(t => t.stop());
-      micOk = true;
-    }catch(e){ micOk = false; }
-    if (!micOk){
-      S.on = false; paint(); showPerm();
-      $("reply").textContent = "Mic ki permission chahiye — upar likha hai kaise dena hai. Uske baad dobara dabao.";
-      return;
-    }
+    // seedha sunna shuru karo — browser khud permission maangega
     hidePerm();
-    await startMeter();
-    await camOn();
     startRec();
+    // meter aur camera alag se, mic ko rokte nahi
+    try{ Promise.resolve(startMeter()).catch(()=>{}); }catch(e){}
+    try{ Promise.resolve(camOn()).catch(()=>{}); }catch(e){}
     $("reply").textContent = "Bolo, main sun rahi hoon.";
   } else {
     stopRec();
