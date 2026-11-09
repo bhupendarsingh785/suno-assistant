@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v33</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v34</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -445,7 +445,7 @@ function buildRec(){
           $('transcript').textContent = said;
           speakReplySafe(said);
         }
-      }, 900);
+      }, 1200);
     }
     if (final){
       clearTimeout(interimTimer);
@@ -550,11 +550,11 @@ function runRec(){
   try{
     rec = buildRec();
     rec.lang = state.lang || 'hi-IN';
-    rec.continuous = false;
+    rec.continuous = true;
     rec.interimResults = true;
     rec.maxAlternatives = 3;
     rec.onend = () => {
-      if (micOn){ clearTimeout(micTimer); micTimer = setTimeout(runRec, 300); }
+      if (micOn){ clearTimeout(micTimer); micTimer = setTimeout(runRec, 700); }
       else { state.listening = false; $('mic').classList.remove('listening'); }
     };
     rec.onerror = (e) => {
@@ -564,9 +564,9 @@ function runRec(){
         status('Mic ki permission nahi mili — Chrome me Allow karo', 'err');
         return;
       }
-      if (err === 'no-speech' || err === 'network' || err === 'aborted' || err === 'audio-capture'){
-        // khud doosra setup try karo
-        if (micOn) setTimeout(() => { autoRepairMic(); }, 300);
+      if (err === 'no-speech' || err === 'aborted'){
+        // kuch sunai nahi — bas dobara sunna shuru karo
+        if (micOn) setTimeout(() => { try{ runRec(); }catch(e){} }, 400);
       }
     };
     rec.start();
