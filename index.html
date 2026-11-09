@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v36</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v37</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -529,6 +529,7 @@ async function startListening(silent){
 
 function stopListening(){
   micOn = false;
+  recBusy = false;
   clearTimeout(micTimer);
   try{ if (rec){ rec.onend = null; rec.stop(); } }catch(e){}
   state.listening = false;
@@ -538,8 +539,11 @@ function stopListening(){
   status('Mic band');
 }
 
+let recBusy = false;
 function runRec(){
   if (!micOn) return;
+  if (recBusy) return;
+  recBusy = true;
   try{
     rec = buildRec();
     rec.lang = state.lang || 'hi-IN';
@@ -547,7 +551,8 @@ function runRec(){
     rec.interimResults = true;
     rec.maxAlternatives = 3;
     rec.onend = () => {
-      if (micOn){ clearTimeout(micTimer); micTimer = setTimeout(runRec, 700); }
+      if (micOn){ clearTimeout(micTimer); recBusy = false;
+      micTimer = setTimeout(runRec, 700); }
       else { state.listening = false; $('mic').classList.remove('listening'); }
     };
     rec.onerror = (e) => {
@@ -559,11 +564,13 @@ function runRec(){
       }
       if (err === 'no-speech' || err === 'aborted'){
         // kuch sunai nahi — bas dobara sunna shuru karo
+        recBusy = false;
         if (micOn) setTimeout(() => { try{ runRec(); }catch(e){} }, 400);
       }
     };
     rec.start();
   }catch(e){
+    recBusy = false;
     clearTimeout(micTimer);
     micTimer = setTimeout(runRec, 900);
   }
@@ -1175,7 +1182,11 @@ if (_mc) _mc.onclick = async () => {
     }
   }catch(e){}
 
-  // asli test: 3 second sunno
+  // asli test: 3 second sunno (pehle main mic band karo, warna do recognition ladte hain)
+  const wasOn = micOn;
+  if (wasOn) stopListening();
+  await new Promise(r => setTimeout(r, 600));
+
   add('Sunne ka test', true, '3 second — ab kuch bolo…');
   out.innerHTML = rows.join('<br>');
   if (!SR) return;
@@ -1191,6 +1202,7 @@ if (_mc) _mc.onclick = async () => {
       rows.pop();
       add('Sunne ka test', !!heard.trim(), heard.trim() ? ('suna: "' + heard.trim() + '"') : 'kuch nahi suna — mic/awaaz check karo');
       out.innerHTML = rows.join('<br>');
+      if (wasOn){ micOn = true; try{ runRec(); }catch(e){} }
     };
     t.start();
     setTimeout(() => { try{ t.stop(); }catch(e){} }, 4000);
