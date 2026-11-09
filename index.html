@@ -150,7 +150,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v17</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v18</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -944,6 +944,16 @@ async function handle(raw, _depth){
     addHistory(text,'Browser open'); status('Mic dabao aur bolo'); return;
   }
 
+  // ---- unknown: AI fail ho gaya to bhi jawab do
+  {
+    const loc = localAnswer(text);
+    reply('💬','Suno', escapeHtml(loc));
+    say(loc);
+    addHistory(text, 'Jawab: ' + loc.slice(0, 40));
+    status('Mic dabao aur bolo');
+    return;
+  }
+
   // ---- unknown: pehle optional AI se samjhne ki koshish
   if (state.aiProvider !== 'none' && state.aiKey && !state._aiBusy){
     state._aiBusy = true;
@@ -1251,6 +1261,25 @@ function docShowErrors(){
   }).join('');
   reply('🩺','Error log (aapke phone me hi)', html + '<br><button class="btn ghost" id="errClear" style="margin-top:6px">Log saaf karo</button>');
   const b = $('errClear'); if (b) b.onclick = ()=>{ try{ localStorage.removeItem('suno_errors'); }catch(e){} toast('Log saaf'); };
+}
+
+function localAnswer(said){
+  const t = String(said || '').toLowerCase();
+  if (/(naam kya|tumhara naam|aapka naam|kaun ho|tum kaun)/.test(t))
+    return "Mera naam Suno hai. Main tumhari assistant hoon — bolo ya likho, main jawab dungi.";
+  if (/(kaise ho|kya haal|namaste|hello|hi\b)/.test(t))
+    return "Main theek hoon. Tum batao — kya karna hai?";
+  if (/(sun sakte|sun sakti|sunna|mic)/.test(t))
+    return "Haan, main sun sakti hoon. Mic dabao aur bolo — pehli baar browser permission maangega, usme Allow karna.";
+  if (/(market|nifty|sensex|reliance|share|bhav)/.test(t))
+    return "Market ka live data Seetal Trader app me hai — Nifty, Bank Nifty, entry-stop-target sab.";
+  if (/(system|tool|app kya)/.test(t))
+    return "System me Trader, Builder, Doctor, Gyan, Vault aur Map — sab jude hue hain.";
+  if (/(udaas|pareshan|thak|mann nahi|tension)/.test(t))
+    return "Sun rahi hoon. Batao kya hua — main yahin hoon.";
+  if (/(time|samay|baje)/.test(t)) { const d=new Date(); return "Abhi " + d.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}) + " baje hain."; }
+  if (/(date|tareekh|aaj)/.test(t)) { const d=new Date(); return "Aaj " + d.toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"}) + " hai."; }
+  return "Main samajh rahi hoon tumne kaha: \"" + String(said).slice(0,50) + "\". Thoda saaf bolo ya doosre shabdon me bolo, main dhyan se sun rahi hoon.";
 }
 
 /* ================= optional AI samajhne wala ================= */
