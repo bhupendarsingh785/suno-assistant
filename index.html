@@ -142,6 +142,23 @@
   .timerbar.on{display:flex}
   .timerbar .t{font-variant-numeric:tabular-nums;font-weight:700;color:#fff}
 </style>
+
+<style>
+  /* ---- simple UI pass ---- */
+  .miczone{padding:26px 0 10px}
+  .mic{width:168px;height:168px;font-size:44px}
+  .mic small{font-size:12px;letter-spacing:2px}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .seetalrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 4px}
+  .seetalchip{display:block;text-align:center;padding:11px 8px;border-radius:14px;background:var(--card);
+    border:1px solid var(--line);color:var(--txt);text-decoration:none;font-size:13px;font-weight:600}
+  .seetalchip:active{background:var(--card2)}
+  details.more{margin-top:14px;border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:hidden}
+  details.more summary{padding:13px 14px;font-size:13.5px;font-weight:700;cursor:pointer;color:var(--muted)}
+  details.more[open] summary{border-bottom:1px solid var(--line)}
+  details.more #history, details.more .note{padding:0 14px}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -182,17 +199,25 @@
 
   <div class="chips" id="chips"></div>
 
+  <div class="seetalrow">
+    <a class="seetalchip" href="https://bhupendarsingh785.github.io/seetal-trader/" target="_blank" rel="noopener">📈 Seetal Trader</a>
+    <a class="seetalchip" href="https://bhupendarsingh785.github.io/seetal-trader/vault.html" target="_blank" rel="noopener">🔐 Vault</a>
+    <a class="seetalchip" href="https://bhupendarsingh785.github.io/seetal-trader/#doctor" target="_blank" rel="noopener">🩺 Doctor</a>
+    <a class="seetalchip" href="https://seetal-trader.netlify.app/" target="_blank" rel="noopener">🌐 Backup site</a>
+  </div>
+
   <div class="typer">
     <input id="typeIn" placeholder="Ya likh kar bolo…" autocomplete="off" />
     <button id="typeGo">Bhejo</button>
   </div>
 
-  <h2 class="sec">Pichhle kaam</h2>
-  <div id="history"><div class="empty">Abhi kuch nahi kiya.</div></div>
-
-  <div class="note">
-    <b>Dhyan rakhein:</b> browser app WiFi/Bluetooth on-off, dusre apps kholna, ya bina tap kiye call lagana — ye sab nahi kar sakta (phone permission nahi deta). Jo ho sakta hai woh sab isi app me hai.
-  </div>
+  <details class="more">
+    <summary>Pichhle kaam aur zaroori baat</summary>
+    <div id="history"><div class="empty">Abhi kuch nahi kiya.</div></div>
+    <div class="note">
+      <b>Dhyan rakhein:</b> browser app WiFi/Bluetooth on-off, dusre apps kholna, ya bina tap kiye call lagana — ye sab nahi kar sakta (phone permission nahi deta).
+    </div>
+  </details>
 </div>
 
 <nav>
