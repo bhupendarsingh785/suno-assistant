@@ -193,6 +193,9 @@
         <span id="replyText">Main aapke phone par browser khol sakta hoon, search kar sakta hoon, call dial kar sakta hoon, WhatsApp/SMS bhej sakta hoon, map khol sakta hoon, notes aur timer rakh sakta hoon. Neeche koi bhi example dabao.</span>
       </div>
     </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn ghost" id="btnSpeakNow" style="flex:1">🔊 Awaaz me suno</button>
+    </div>
     <div class="timerbar" id="timerBar">⏱️ <span id="timerLeft" class="t">--:--</span> <span id="timerWhat" style="color:var(--muted)"></span>
       <button class="iconbtn" id="timerCancel" style="margin-left:auto;width:auto;padding:0 10px;height:30px;font-size:11.5px">Cancel</button>
     </div>
@@ -300,6 +303,8 @@
       <input id="setAiKey" placeholder="API key (optional)" style="margin-top:8px" autocomplete="off" />
       <input id="setAiModel" placeholder="model (optional, e.g. gemini-2.0-flash)" style="margin-top:8px" autocomplete="off" />
       <button class="btn ghost" id="btnAiTest" style="margin-top:8px">AI test karo</button>
+      <button class="btn ghost" id="btnVoiceTest" style="margin-top:8px">🔊 Awaaz test karo</button>
+      <div id="voiceTestOut" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
       <div id="aiTestOut" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
     </div>
     <button class="btn" id="setSave">Save karo</button>
@@ -1073,6 +1078,17 @@ async function handle(raw, _depth){
 }
 
 /* ============ UI wiring ============ */
+let _lastReply = '';
+const _origSay = say;
+say = function(text, _retry){ _lastReply = text || _lastReply; return _origSay(text, _retry); };
+const _btnSpeak = $('btnSpeakNow');
+if (_btnSpeak) _btnSpeak.onclick = ()=>{
+  const t = _lastReply || $('replyText').textContent || '';
+  if (!t) { toast('Pehle kuch bolo'); return; }
+  const was = state.speak; state.speak = true;
+  say(t);
+  state.speak = was;
+};
 $('mic').onclick = ()=>startListening();
 $('typeGo').onclick = ()=>{
   const v = $('typeIn').value.trim();
@@ -1493,6 +1509,16 @@ $('btnImport').onclick = importSettings;
 $('btnPickContact').onclick = pickContact;
 $('setMirrors').value = state.mirrors.join('\n');
 $('setAiProv').value = state.aiProvider;
+const _vBtn = $('btnVoiceTest');
+if (_vBtn) _vBtn.onclick = ()=>{
+  const out = $('voiceTestOut');
+  let n = 0;
+  try{ n = (window.speechSynthesis.getVoices()||[]).length; }catch(e){}
+  const was = state.speak; state.speak = true;
+  say('Namaste, main Suno hoon. Awaaz chal rahi hai.');
+  state.speak = was;
+  out.textContent = n ? ('Phone me ' + n + ' awaaz mili — sunai de to sab theek hai.') : 'Phone me koi awaaz nahi mili. Chrome → Settings → Accessibility → Text-to-speech check karo.';
+};
 const _aiTestBtn = $('btnAiTest');
 if (_aiTestBtn) _aiTestBtn.onclick = async ()=>{
   state.aiKey = ($('setAiKey').value || '').trim();
