@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v37</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v38</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -569,6 +569,10 @@ function runRec(){
       }
     };
     rec.start();
+    clearTimeout(window._recWatch);
+    window._recWatch = setTimeout(() => {
+      if (micOn && !state.listening){ recBusy = false; try{ runRec(); }catch(e){} }
+    }, 9000);
   }catch(e){
     recBusy = false;
     clearTimeout(micTimer);
@@ -1202,7 +1206,7 @@ if (_mc) _mc.onclick = async () => {
       rows.pop();
       add('Sunne ka test', !!heard.trim(), heard.trim() ? ('suna: "' + heard.trim() + '"') : 'kuch nahi suna — mic/awaaz check karo');
       out.innerHTML = rows.join('<br>');
-      if (wasOn){ micOn = true; try{ runRec(); }catch(e){} }
+      if (wasOn){ setTimeout(()=>{ micOn = true; recBusy = false; try{ runRec(); }catch(e){} }, 900); }
     };
     t.start();
     setTimeout(() => { try{ t.stop(); }catch(e){} }, 4000);
