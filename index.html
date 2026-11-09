@@ -150,7 +150,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control</p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v16</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -439,20 +439,68 @@ function stopUI(){
   $('micLabel').textContent = 'BOLO';
   if ($('statusText').textContent.indexOf('Sun') === 0) status('Mic dabao aur bolo');
 }
-function startListening(silent){
+async function ensureMic(){
+  try{
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+    st.getTracks().forEach(t => t.stop());
+    return true;
+  }catch(e){
+    status('Mic ki permission chahiye — Chrome me Allow karo', 'err');
+    toast('Mic permission do: 🔒 icon → Permissions → Microphone → Allow');
+    return false;
+  }
+}
+
+let micOn = false, micTimer = null;
+
+async function startListening(silent){
   if (!SR){
     status('Is browser me voice support nahi hai — neeche likh kar bhejein', 'err');
     if (!silent) toast('Voice support nahi. Likh kar bhejein.');
     $('typeIn').focus();
     return;
   }
+  if (!micOn){
+    const ok = await ensureMic();
+    if (!ok) return;
+  }
+  micOn = true;
+  runRec();
+}
+
+function stopListening(){
+  micOn = false;
+  clearTimeout(micTimer);
+  try{ if (rec){ rec.onend = null; rec.stop(); } }catch(e){}
+  state.listening = false;
+  $('mic').classList.remove('listening');
+  $('micIcon').textContent = '🎙️';
+  $('micLabel').textContent = 'BOLO';
+  status('Mic band');
+}
+
+function runRec(){
+  if (!micOn) return;
   try{
-    if (state.listening){ try{ rec && rec.stop(); }catch(e){} return; }
     rec = buildRec();
     rec.lang = state.lang;
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 3;
+    rec.onend = () => {
+      if (micOn){ clearTimeout(micTimer); micTimer = setTimeout(runRec, 300); }
+      else { state.listening = false; $('mic').classList.remove('listening'); }
+    };
+    rec.onerror = (e) => {
+      if (e && (e.error === 'not-allowed' || e.error === 'service-not-allowed')){
+        micOn = false;
+        status('Mic ki permission nahi mili', 'err');
+      }
+    };
     rec.start();
   }catch(e){
-    status('Mic start nahi hua — dobara dabayein', 'err');
+    clearTimeout(micTimer);
+    micTimer = setTimeout(runRec, 900);
   }
 }
 
@@ -912,7 +960,7 @@ async function handle(raw, _depth){
 }
 
 /* ============ UI wiring ============ */
-$('mic').onclick = ()=>startListening();
+$('mic').onclick = ()=>{ if (micOn) stopListening(); else startListening(); };
 $('typeGo').onclick = ()=>{
   const v = $('typeIn').value.trim();
   if (!v) return;
