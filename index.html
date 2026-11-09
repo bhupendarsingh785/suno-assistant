@@ -460,6 +460,7 @@ function chunks(text, size){
 function say(text, _retry){
   if (!state.speak || !('speechSynthesis' in window) || !text) return;
   try{
+    state.speaking = true;
     // apni hi awaaz na sune — bolne se pehle mic rok do
     try{ if (alwaysRec){ alwaysRec.onend = null; alwaysRec.stop(); alwaysRec = null; } }catch(e){}
     try{ if (rec && state.listening){ rec.stop(); } }catch(e){}
@@ -480,10 +481,16 @@ function say(text, _retry){
       if (v) u.voice = v;
       if (i === parts.length - 1){
         u.onend = () => {
+          state.speaking = false;
           // auto mode: jawab ke baad phir sunna shuru karo
           try{
             if (state.always){
-              setTimeout(()=>{ try{ if (!alwaysRec && state.always) startAlways(); }catch(e){} }, 300);
+              setTimeout(()=>{
+                try{
+                  if (state.always && !state.speaking && !(window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending))) startAlways();
+                  else if (state.always) setTimeout(()=>{ try{ if (state.always) startAlways(); }catch(e){} }, 900);
+                }catch(e){}
+              }, 900);
               return;
             }
             if (state.auto && !state.listening && typeof startListening === "function"){
@@ -1350,6 +1357,8 @@ function startAlways(){
   startLevelMeter();
   const run = () => {
     if (!state.always) return;
+    if (state.speaking){ clearTimeout(alwaysTimer); alwaysTimer = setTimeout(run, 800); return; }
+    try{ if (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending)){ clearTimeout(alwaysTimer); alwaysTimer = setTimeout(run, 800); return; } }catch(e){}
     try{
       alwaysRec = new SR();
       alwaysRec.lang = state.lang;
@@ -1357,6 +1366,7 @@ function startAlways(){
       alwaysRec.interimResults = true;
       alwaysRec.maxAlternatives = 5;   // dur se bola ho to best match chun sake
       alwaysRec.onresult = (ev) => {
+        if (state.speaking) return;              // bol rahi hoon — apni awaaz ignore
         let finalTxt = '', interim = '';
         for (let i = ev.resultIndex; i < ev.results.length; i++){
           const r = ev.results[i];
@@ -1369,6 +1379,9 @@ function startAlways(){
         }
         if (finalTxt.trim()){
           let said = finalTxt.trim();
+          const wcount = said.split(/\s+/).filter(Boolean).length;
+          const hasCmd = /(market|nifty|kholo|khol|batao|mausam|time|samay|note|timer|alarm|system|trader|builder|doctor|gyan|vault|call|whatsapp|sms|search|dhoondo|band|chalu|haan|nahi|kaun|kya|kaise)/i.test(said);
+          if (wcount < 2 && !hasCmd){ return; }   // shor ya adhoora — chhod do
           try{
             const res = ev.results[ev.results.length - 1];
             if (res && res.length > 1){
