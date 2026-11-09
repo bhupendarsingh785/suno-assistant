@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v27</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v28</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -181,10 +181,12 @@
   </div>
 
   <div style="text-align:center;margin:6px 0 10px">
+  <button class="btn ghost" id="apiBtn" style="padding:9px 14px;border-radius:12px;font-size:13px;margin-right:6px">🔌 API test</button>
   <button class="btn ghost" id="healBtn" style="padding:9px 14px;border-radius:12px;font-size:13px;margin-right:6px">🔧 Khud theek karo</button>
   <button class="btn ghost" id="contactBtn" style="padding:9px 14px;border-radius:12px;font-size:13px;margin-right:6px">📇 Contacts</button>
   <button class="btn ghost" id="micCheck" style="padding:9px 14px;border-radius:12px;font-size:13px">🎤 Mic check karo</button>
   <div id="micOut" style="font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.6"></div>
+  <div id="apiOut" style="font-size:12.5px;color:var(--muted);margin-top:6px"></div>
 </div>
 
 <div class="transcript" id="transcript">Jaise: <b>“YouTube kholo”</b>, <b>“call karo 98765…”</b>, <b>“mausam batao”</b></div>
@@ -1069,7 +1071,7 @@ async function handle(raw, _depth){
     try{
       const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant. Roman Hindi me 2-3 chhoti line me seedha jawab do, '
         + 'aakhir me ek chhota sawal. Swag ne kaha: "' + text + '"';
-      ai = await freeAI(prompt);
+      ai = await apiAsk(prompt, 12000);
     }catch(e){}
     const finalText = (ai && ai.trim()) ? ai.trim() : loc;
     reply('💬','Suno', escapeHtml(finalText).replace(/\n/g,'<br>'));
@@ -1093,6 +1095,8 @@ if (_sr) _sr.onclick = () => {
 };
 
 /* ---- mic ka poora check: asli wajah batayega ---- */
+const _ab = document.getElementById('apiBtn');
+if (_ab) _ab.onclick = async () => { await apiTest(); };
 const _hb = document.getElementById('healBtn');
 if (_hb) _hb.onclick = () => selfHeal(false);
 const _cbtn = document.getElementById('contactBtn');
@@ -1499,6 +1503,67 @@ async function autoRepairMic(){
 /* jo setup chala, use permanent yaad rakho */
 function markWorking(){ try{ localStorage.setItem(CFG_KEY + '.ok', JSON.stringify(getCfg())); cfgTries = 0; }catch(e){} }
 
+
+/* ================= API layer: kai provider, failover, retry ================= */
+async function apiCall(provider, key, model, prompt, ms){
+  const ctl = new AbortController();
+  const to = setTimeout(() => ctl.abort(), ms || 15000);
+  try{
+    if (provider === 'gemini'){
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + (model || 'gemini-2.0-flash') + ':generateContent?key=' + encodeURIComponent(key);
+      const r = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ contents:[{ parts:[{ text: prompt }] }] }), signal: ctl.signal });
+      const j = await r.json();
+      if (j.error) throw new Error(j.error.message || 'gemini error');
+      const t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts[0].text;
+      if (!t) throw new Error('khaali');
+      return t.trim();
+    }
+    if (provider === 'openai'){
+      const url = 'https://api.openai.com/v1/chat/completions';
+      const r = await fetch(url, { method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + key },
+        body: JSON.stringify({ model: model || 'gpt-4o-mini', temperature: 0.4, messages:[{ role:'user', content: prompt }] }),
+        signal: ctl.signal });
+      const j = await r.json();
+      if (j.error) throw new Error(j.error.message || 'openai error');
+      const t = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+      if (!t) throw new Error('khaali');
+      return t.trim();
+    }
+    throw new Error('provider nahi');
+  } finally { clearTimeout(to); }
+}
+
+/* sabse achha available rasta: apni key pehle, phir free */
+async function apiAsk(prompt, ms){
+  const tries = [];
+  if (state.aiKey && state.aiProvider && state.aiProvider !== 'none'){
+    tries.push(['apni ' + state.aiProvider, () => apiCall(state.aiProvider, state.aiKey, state.aiModel, prompt, ms)]);
+  }
+  tries.push(['free AI', () => freeAI(prompt)]);
+  for (const [name, fn] of tries){
+    try{
+      const t = await fn();
+      if (t && t.length > 2){ state._apiLast = name; return t; }
+    }catch(e){ state._apiLast = name + ' fail: ' + String(e.message || e).slice(0,40); }
+  }
+  return null;
+}
+
+/* API test button */
+async function apiTest(){
+  const out = document.getElementById('apiOut');
+  if (out) out.textContent = 'Test kar raha hoon…';
+  const t = await apiAsk('Sirf ek shabd likho: theek', 12000);
+  if (out){
+    out.textContent = t
+      ? '✅ Chal gaya (' + (state._apiLast || '?') + '): ' + t.slice(0, 60)
+      : '❌ Koi API nahi chali — key check karo. (' + (state._apiLast || '') + ')';
+  }
+  return t;
+}
+
 /* ================= khud ko theek karna (self-heal) ================= */
 async function selfHeal(silent){
   const log = [];
@@ -1539,7 +1604,7 @@ async function selfHeal(silent){
   let aiOk = false;
   try{
     const r = await Promise.race([
-      freeAI('Sirf ek shabd likho: theek'),
+      apiAsk('Sirf ek shabd likho: teek', 8000),
       new Promise(res => setTimeout(() => res(null), 6000))
     ]);
     aiOk = !!r;
