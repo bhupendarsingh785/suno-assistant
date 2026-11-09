@@ -461,6 +461,7 @@ function say(text, _retry){
   if (!state.speak || !('speechSynthesis' in window) || !text) return;
   try{
     state.speaking = true;
+    state._lastSpoken = String(text).slice(0, 400);
     // apni hi awaaz na sune — bolne se pehle mic rok do
     try{ if (alwaysRec){ alwaysRec.onend = null; alwaysRec.stop(); alwaysRec = null; } }catch(e){}
     try{ if (rec && state.listening){ rec.stop(); } }catch(e){}
@@ -1379,8 +1380,14 @@ function startAlways(){
         }
         if (finalTxt.trim()){
           let said = finalTxt.trim();
+          // apne hi bole hue shabd wapas aaye? ignore
+          try{
+            const last = String(state._lastSpoken || '').toLowerCase().replace(/\s+/g,' ');
+            const norm = said.toLowerCase().replace(/\s+/g,' ');
+            if (last && norm.length > 6 && last.includes(norm.slice(0, Math.min(24, norm.length)))) return;
+          }catch(e){}
           const wcount = said.split(/\s+/).filter(Boolean).length;
-          const hasCmd = /(market|nifty|kholo|khol|batao|mausam|time|samay|note|timer|alarm|system|trader|builder|doctor|gyan|vault|call|whatsapp|sms|search|dhoondo|band|chalu|haan|nahi|kaun|kya|kaise)/i.test(said);
+          const hasCmd = /(market|nifty|kholo|khol|batao|mausam|time|samay|note|timer|alarm|system|trader|builder|doctor|gyan|vault|call|whatsapp|sms|search|dhoondo|band|chalu|haan|nahi|kaun|kya|kaise|suno|bolo|mera|tum|aap)/i.test(said);
           if (wcount < 2 && !hasCmd){ return; }   // shor ya adhoora — chhod do
           try{
             const res = ev.results[ev.results.length - 1];
@@ -2055,6 +2062,16 @@ $('setSave').onclick = ()=>{
 };
 
 /* service worker: offline shell */
+/* watchdog — agar TTS ka onend kabhi na aaye to mic hamesha band na rahe */
+setInterval(() => {
+  try{
+    if (state.speaking){
+      const sp = window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending);
+      if (!sp) state.speaking = false;
+    }
+  }catch(e){ state.speaking = false; }
+}, 1500);
+
 paintAlways();
 if (state.always) setTimeout(()=>{ try{ startAlways(); }catch(e){} }, 1200);
 
