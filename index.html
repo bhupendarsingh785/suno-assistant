@@ -150,7 +150,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v16</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v17</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -165,7 +165,12 @@
     </button>
   </div>
 
-  <div class="transcript" id="transcript">Jaise: <b>“YouTube kholo”</b>, <b>“call karo 98765…”</b>, <b>“mausam batao”</b></div>
+  <div style="text-align:center;margin:6px 0 10px">
+  <button class="btn ghost" id="micCheck" style="padding:9px 14px;border-radius:12px;font-size:13px">🎤 Mic check karo</button>
+  <div id="micOut" style="font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.6"></div>
+</div>
+
+<div class="transcript" id="transcript">Jaise: <b>“YouTube kholo”</b>, <b>“call karo 98765…”</b>, <b>“mausam batao”</b></div>
 
   <div class="card" id="replyCard">
     <div class="reply">
@@ -961,6 +966,56 @@ async function handle(raw, _depth){
 
 /* ============ UI wiring ============ */
 $('mic').onclick = ()=>{ if (micOn) stopListening(); else startListening(); };
+
+/* ---- mic ka poora check: asli wajah batayega ---- */
+const _mc = document.getElementById('micCheck');
+if (_mc) _mc.onclick = async () => {
+  const out = document.getElementById('micOut');
+  const rows = [];
+  const add = (n, ok, note) => rows.push((ok ? '✅ ' : '❌ ') + n + (note ? ' — ' + note : ''));
+
+  add('SpeechRecognition', !!SR, SR ? 'maujood' : 'is browser me nahi (Chrome chahiye)');
+  add('Secure page (https)', location.protocol === 'https:', location.protocol);
+
+  try{
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+    st.getTracks().forEach(t => t.stop());
+    add('Mic permission', true, 'mil gayi');
+  }catch(e){
+    add('Mic permission', false, e.name + ' — ' + (e.name === 'NotAllowedError' ? 'browser ne block kiya hai' : e.name === 'NotFoundError' ? 'koi mic nahi mila' : 'dikkat'));
+  }
+
+  try{
+    if (navigator.permissions && navigator.permissions.query){
+      const p = await navigator.permissions.query({ name: 'microphone' });
+      add('Browser me mic state', p.state === 'granted', p.state);
+    }
+  }catch(e){}
+
+  // asli test: 3 second sunno
+  add('Sunne ka test', true, '3 second — ab kuch bolo…');
+  out.innerHTML = rows.join('<br>');
+  if (!SR) return;
+  try{
+    const t = new SR();
+    t.lang = 'hi-IN';
+    t.interimResults = true;
+    t.continuous = false;
+    let heard = '';
+    t.onresult = (ev) => { for (let i=0;i<ev.results.length;i++) heard += ev.results[i][0].transcript + ' '; };
+    t.onerror = (e) => { rows.push('❌ Sunne me error — ' + e.error); out.innerHTML = rows.join('<br>'); };
+    t.onend = () => {
+      rows.pop();
+      add('Sunne ka test', !!heard.trim(), heard.trim() ? ('suna: "' + heard.trim() + '"') : 'kuch nahi suna — mic/awaaz check karo');
+      out.innerHTML = rows.join('<br>');
+    };
+    t.start();
+    setTimeout(() => { try{ t.stop(); }catch(e){} }, 4000);
+  }catch(e){
+    rows.push('❌ Test shuru nahi hua — ' + e.message);
+    out.innerHTML = rows.join('<br>');
+  }
+};
 $('typeGo').onclick = ()=>{
   const v = $('typeIn').value.trim();
   if (!v) return;
