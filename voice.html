@@ -57,50 +57,33 @@
 
 <div class="head">
   <h1>Suno Live</h1>
-  <p>Ek button — dekhna, sunna, bolna, sab saath · <b style="color:#22d3ee">v10</b></p>
+  <p>Ek baar mic dabao — phir baat karte raho. Band karne ke liye dobara dabao.</p>
 </div>
-
-<div class="chip" id="chip">Band</div>
 
 <div class="stage">
   <video id="cam" autoplay playsinline muted></video>
   <button class="mic" id="mic">🎙️</button>
-  <div class="state" id="state">Dabao — main sunungi aur dekhungi</div>
+  <div class="state" id="state">Mic dabao</div>
   <div class="level"><i id="lvl"></i></div>
 </div>
 
 <div id="permBox" style="display:none;width:100%;max-width:420px;background:rgba(251,113,133,.1);
      border:1px solid rgba(251,113,133,.45);border-radius:16px;padding:13px 15px;font-size:13.5px;line-height:1.6;color:#ffd0d8">
-  <b>Mic ki permission band hai.</b><br>
-  Chrome me: address bar ke paas <b>🔒 / ⚙️</b> icon → <b>Permissions</b> → <b>Microphone</b> → <b>Allow</b> → phir page reload karo.
+  <b>Mic ki permission chahiye.</b><br>
+  Neeche <b>🎤 Permission do</b> dabao → <b>Allow</b> karo. Ya Chrome ke 🔒 icon → Permissions → Microphone → Allow.
   <br><br>
-  <button class="btn" id="permRetry" style="margin-top:4px">Dobara koshish karo</button>
+  <button class="btn" id="permRetry">Dobara koshish karo</button>
 </div>
 
 <div class="bubble heard" id="heard">…</div>
 <div class="bubble reply" id="reply">Bolo, main sun rahi hoon.</div>
 
-<div class="row" style="width:100%;max-width:420px;gap:8px;flex-wrap:nowrap">
-  <input id="typeIn" placeholder="Ya likh kar bolo…" autocomplete="off"
-    style="flex:1;background:#0b1119;border:1px solid var(--line);color:var(--txt);padding:12px 14px;border-radius:13px;font-size:14.5px" />
-  <button class="btn" id="sendBtn" style="padding:12px 16px">Bhejo</button>
-</div>
-
 <div class="row">
   <button class="btn" id="permBtn">🎤 Permission do</button>
+  <button class="btn" id="camBtn">📷 Camera</button>
   <button class="btn" id="lookBtn" style="display:none">👁️ Dekho</button>
-  <button class="btn" id="clearBtn">Nayi baat</button>
+  <button class="btn" id="clearBtn">Saaf</button>
 </div>
-
-<details>
-  <summary>⚙️ Options</summary>
-  <div class="opt"><span>Awaaz</span><select id="voiceSel"></select></div>
-  <div class="opt"><span>Raftaar</span><select id="rateSel">
-    <option value="0.85">Dheemi</option><option value="1" selected>Normal</option><option value="1.15">Tez</option>
-  </select></div>
-  <div class="opt"><span>Yaaddasht</span><span id="memCount" style="color:var(--dim)">0</span></div>
-  <div class="opt"><span>Yaaddasht saaf</span><button class="btn" id="memClear">Saaf</button></div>
-</details>
 
 <script src="core.js"></script>
 <script>
@@ -430,6 +413,11 @@ async function sendTyped(){
 }
 $("sendBtn").onclick = sendTyped;
 $("typeIn").addEventListener("keydown", (e) => { if (e.key === "Enter") sendTyped(); });
+
+const _cb = document.getElementById("camBtn");
+if (_cb) _cb.onclick = () => { if (S.camStream){ camOff(); _cb.classList.remove("on"); } else { camOn(); _cb.classList.add("on"); } };
+const _pr2 = document.getElementById("permRetry");
+if (_pr2) _pr2.onclick = () => { const b = document.getElementById("permBtn"); if (b) b.click(); };
 
 $("clearBtn").onclick = () => { $("heard").textContent = "…"; $("reply").textContent = "Bolo, main sun rahi hoon."; };
 
