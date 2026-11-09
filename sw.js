@@ -1,8 +1,8 @@
 /* Suno service worker — v3
    HTML ke liye network-first (naya version turant aaye),
    baaki files cache-first (offline bhi chale). */
-const CACHE = 'suno-v3';
-const FILES = ['./', './index.html', './manifest.webmanifest'];
+const CACHE = 'suno-v4';
+const FILES = ['./', './index.html', './voice.html', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
