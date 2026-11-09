@@ -971,23 +971,38 @@ async function handle(raw, _depth){
     addHistory(text,'Browser open'); status('Mic dabao aur bolo'); return;
   }
 
-  // ---- unknown: pehle optional AI se samjhne ki koshish
-  if (state.aiProvider !== 'none' && state.aiKey && !state._aiBusy){
-    state._aiBusy = true;
-    reply('🤖','AI se samajh raha hoon…', escapeHtml(text));
-    const aiCmd = await aiInterpret(text);
-    const mapped = aiCmd ? mapAiCmd(aiCmd) : null;
-    state._aiBusy = false;
-    if (mapped){ return handle(mapped); }
+  // ---- chhoti-moti baatein (small talk)
+  if (/(kaise ho|kaisa hai tu|kya haal|hello|hi suno|namaste)/.test(t)){
+    reply('😊','Main bilkul theek hoon', 'Bolo, kya karna hai?');
+    say('Main theek hoon. Bolo, kya karna hai?');
+    status('Mic dabao aur bolo'); return;
+  }
+  if (/(thank|thanks|shukriya|dhanyavad|dhanyawad)/.test(t)){
+    reply('🙏','Koi baat nahi', 'Aur kuch chahiye to bolo.');
+    say('Koi baat nahi. Aur kuch chahiye to bolo.');
+    status('Mic dabao aur bolo'); return;
+  }
+  if (/(tum kaun|kaun ho tum|tumhara naam|aap kaun)/.test(t)){
+    reply('🤖','Main Suno hoon', 'Aapke phone ka awaaz assistant. Browser, search, call, notes, timer, mausam aur market — sab kuch.');
+    say('Main Suno hoon, aapke phone ka assistant. Bolo kya karna hai.');
+    status('Mic dabao aur bolo'); return;
   }
 
-  // ---- unknown
+  // ---- unknown: kabhi khaali haath wapas nahi
   const guess = findSite(t);
-  reply('🤔','Samajh nahi aaya', 'Aapne kaha: “'+escapeHtml(text)+'”<br>'+
-    (guess ? 'Shayad aap <b>'+guess.name+'</b> kholna chahte the — “'+guess.name+' kholo” boliye.<br>' : '')+
-    'Examples: “YouTube kholo”, “Google par news search karo”, “call karo 9876543210”, “mausam batao”, “note likho doodh lana hai”, “5 minute ka timer”.');
-  say('Samajh nahi aaya. Commands tab me list dekh lein.');
-  addHistory(text,'Samajh nahi aaya');
+  const words = t.trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2){
+    const q = text.replace(/^(suno|hey|please|zara)\s+/i,'').trim();
+    openUrl('https://www.google.com/search?q='+encodeURIComponent(q));
+    reply('🔎','Ye main seedha nahi jaanta', 'Aapne kaha: “'+escapeHtml(text)+'”<br>Google par dhoondh raha hoon. Commands tab me poora list bhi hai.');
+    say('Ye main seedha nahi jaanta, isliye Google par dhoondh raha hoon.');
+    addHistory(text,'Google: '+q);
+  } else {
+    reply('🤔','Thoda aur batao', 'Aapne kaha: “'+escapeHtml(text)+'”<br>'+
+      (guess ? 'Shayad aap <b>'+guess.name+'</b> kholna chahte the — “'+guess.name+' kholo” boliye.<br>' : '')+
+      'Jaise: “YouTube kholo”, “mausam batao”, “market kaisa hai”, “call karo 9876543210”, “5 minute ka timer”.');
+    say('Thoda aur batao — jaise YouTube kholo, mausam batao, ya market kaisa hai.');
+  }
   status('Mic dabao aur bolo');
 }
 
