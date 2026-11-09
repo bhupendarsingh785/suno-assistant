@@ -1120,6 +1120,16 @@ async function handle(raw, _depth){
     status('Mic dabao aur bolo'); return;
   }
 
+  // ---- poore system ka poora gyan (system.json)
+  const full = await fullSelfAnswer(t);
+  if (full){
+    reply('📚', 'Seetal ka poora naksha', escapeHtml(full).replace(/\n/g,'<br>'));
+    say(full.replace(/\n/g,' ').slice(0, 500));
+    addHistory(text, 'Poora system bataya');
+    status('Mic dabao aur bolo');
+    return;
+  }
+
   // ---- poore system ke bare me sawal
   if (/(system|sab tool|saare tool|kya kya chal|kaun chal|haal batao|status)/.test(t)){
     const a = await systemAnswer();
@@ -1685,6 +1695,55 @@ function selfAnswer(t){
   }
   if (has(/data kahan|mera data|privacy|kahan save/)){
     return SELF.data;
+  }
+  return null;
+}
+
+
+/* ---- poore system ka poora gyan (system.json se) ---- */
+let SYSTEM = null;
+async function loadSystem(){
+  if (SYSTEM) return SYSTEM;
+  const urls = [
+    'https://raw.githubusercontent.com/bhupendarsingh785/seetal-trader/main/system.json',
+    'https://cdn.jsdelivr.net/gh/bhupendarsingh785/seetal-trader@main/system.json',
+    'https://bhupendarsingh785.github.io/seetal-trader/system.json'
+  ];
+  for (const u of urls){
+    try{
+      const r = await fetch(u + '?t=' + Date.now(), { cache:'no-store' });
+      if (!r.ok) continue;
+      SYSTEM = await r.json();
+      if (SYSTEM && SYSTEM.pages) return SYSTEM;
+    }catch(e){}
+  }
+  return null;
+}
+
+async function fullSelfAnswer(t){
+  const S = await loadSystem();
+  if (!S) return null;
+  const has = (re) => re.test(t);
+
+  if (has(/kitne page|kitne hisse|saare page|poora structure|structure kya/)){
+    return 'Poore system me ' + S.pages.length + ' hisse hain:\n• ' + S.pages.map(p => p.name + ' (' + p.file + ') — ' + p.desc).join('\n• ');
+  }
+  if (has(/kya kya data|data kahan se|kitne raste|source/)){
+    return 'Data ' + S.data_routes.length + ' raste se aata hai:\n• ' + S.data_routes.map(d => d.name).join('\n• ')
+      + '\n\nProviders — bars: ' + S.providers.bars.join(', ') + '. Quotes: ' + S.providers.quotes.join(', ') + '.';
+  }
+  if (has(/kya kya key|secret|chahiye kya/)){
+    return 'Jo keys chahiye:\n• ' + Object.entries(S.secrets_needed).map(([k,v]) => k + ' — ' + v).join('\n• ');
+  }
+  if (has(/limit|nahi kar sakti|kamzori|weak|dikkat kahan/)){
+    return 'Kamzoriyan (sach):\n• ' + S.weak_points.map(w => w.area + ' — ' + w.status + ' (' + w.why + ')').join('\n• ')
+      + '\n\nSeemaayein:\n• ' + S.known_limits.join('\n• ');
+  }
+  if (has(/advance kaise|aage kya|sudhaar|behtar kaise/)){
+    return 'Aage ye karna hai:\n• ' + S.how_to_advance.join('\n• ');
+  }
+  if (has(/kahan hai|link|site|repos/)){
+    return 'Live sites:\n• ' + S.live_sites.join('\n• ') + '\n\nRepos:\n• GitHub: ' + S.repos.github + '\n• GitLab: ' + S.repos.gitlab_mirror + '\n• Suno: ' + S.repos.suno;
   }
   return null;
 }
