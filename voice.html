@@ -55,6 +55,7 @@
   <button class="btn" id="clearBtn">Saaf</button>
 </div>
 
+<script src="core.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -170,14 +171,23 @@ async function askAI(prompt){
 
 async function answer(said){
   stopRec();
+  try{ if (window.SeetalCore){ SeetalCore.push('chat', { who:'user', text: said }); } }catch(e){}
   $("state").textContent = "Soch rahi hoon…";
   $("reply").textContent = "…";
-  const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant. Roman Hindi me, 2-3 chhoti line me, seedha jawab do. '
+  let past = '';
+  try{
+    if (window.SeetalCore){
+      past = SeetalCore.list('chat').slice(-6).map(m => (m.who === 'user' ? 'Swag: ' : 'Suno: ') + m.text).join('\n');
+    }
+  }catch(e){}
+  const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant (poore Seetal system ka ek hissa). Roman Hindi me, 2-3 chhoti line me, seedha jawab do. '
+    + (past ? 'Pichhli baat-cheet:\n' + past + '\n' : '')
     + 'Lecture mat do. Agar market ka sawal ho to "market kaisa hai" bolne se live data milta hai. '
     + 'User ne kaha: "' + said + '"';
   const t = await askAI(prompt);
   if (t){
     $("reply").textContent = t.trim();
+    try{ if (window.SeetalCore){ SeetalCore.push('chat', { who:'assistant', text: t.trim().slice(0,300) }); } }catch(e){}
     speak(t.trim());
   } else {
     $("reply").textContent = "Jawab nahi aa paya — net check karo.";
@@ -212,8 +222,60 @@ $("lookBtn").onclick = async () => {
   const c = document.createElement("canvas");
   c.width = 640; c.height = Math.round(640 * v.videoHeight / v.videoWidth);
   c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
-  $("reply").textContent = "Photo le li. Dekhne ke liye Gemini key chahiye (Settings me daalo) — abhi main sirf camera dikha sakti hoon.";
-  speak("Camera chal raha hai. Dekhne ke liye Gemini key chahiye.");
+  const b64 = c.toDataURL("image/jpeg", 0.6).split(",")[1];
+  $("reply").textContent = "Dekh rahi hoon…";
+  $("state").textContent = "Dekh rahi hoon…";
+
+  // 1) apni Gemini key ho to wahi (sabse achha)
+  try{
+    const key = localStorage.getItem("aiKey") || "";
+    const prov = localStorage.getItem("aiProvider") || "";
+    const model = localStorage.getItem("aiModel") || "gemini-2.0-flash";
+    if (key && prov === "gemini"){
+      const url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + encodeURIComponent(key);
+      const body = JSON.stringify({ contents: [{ parts: [
+        { text: "Is photo me kya dikh raha hai? Hinglish me 2 line. Agar koi insaan hai to uska mood batao." },
+        { inline_data: { mime_type: "image/jpeg", data: b64 } }
+      ] }] });
+      const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body });
+      const j = await r.json();
+      if (j.error) throw new Error(j.error.message);
+      const t = j.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!t) throw new Error("khaali");
+      $("reply").textContent = t.trim();
+      speak(t.trim());
+      $("state").textContent = S.on ? "Sun rahi hoon…" : "Mic dabao";
+      return;
+    }
+  }catch(e){}
+
+  // 2) free rasta — openai-compatible (bina key)
+  try{
+    const r = await fetch("https://text.pollinations.ai/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "openai",
+        messages: [{ role: "user", content: [
+          { type: "text", text: "Is photo me kya dikh raha hai? Hinglish me 2 line. Agar koi insaan hai to uska mood batao." },
+          { type: "image_url", image_url: { url: "data:image/jpeg;base64," + b64 } }
+        ] }]
+      })
+    });
+    const j = await r.json();
+    const t = j.choices?.[0]?.message?.content;
+    if (t && t.length > 3){
+      $("reply").textContent = t.trim();
+      speak(t.trim());
+      $("state").textContent = S.on ? "Sun rahi hoon…" : "Mic dabao";
+      return;
+    }
+    throw new Error("vision nahi mila");
+  }catch(e){
+    $("reply").textContent = "Camera chal raha hai, par photo samajhne wala free AI abhi jawab nahi de raha. Chaho to Settings me Gemini key daal do — phir main dekh kar bataungi.";
+    speak("Camera chal raha hai. Photo samajhne ke liye abhi jawab nahi aa raha.");
+    $("state").textContent = S.on ? "Sun rahi hoon…" : "Mic dabao";
+  }
 };
 
 /* ---------- mic ---------- */
@@ -268,6 +330,7 @@ function stopMeter(){
   S.stream = null;
 }
 
+try{ if (window.SeetalCore) SeetalCore.visit('suno-live'); }catch(e){}
 paint();
 </script>
 </body>
