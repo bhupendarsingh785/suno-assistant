@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v21</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v22</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -1031,10 +1031,18 @@ async function handle(raw, _depth){
     addHistory(text,'Browser open'); status('Mic dabao aur bolo'); return;
   }
 
-  // ---- unknown: AI fail ho gaya to bhi jawab do
+  // ---- unknown: pehle free AI, phir local jawab
   {
-    const loc = localAnswer(text);
-    reply('💬','Suno', escapeHtml(loc));
+    status('Soch rahi hoon…', 'busy');
+    const past = (state.history || []).slice(0,4).map(h => h.cmd).join(' | ');
+    const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant (girlish, pyaar se, chhoti line). '
+      + 'Roman Hindi me 2-3 line me seedha jawab do, aur aakhir me ek chhota sawal poochho. '
+      + (past ? 'Pichhli baatein: ' + past + '. ' : '')
+      + 'Swag ne kaha: "' + text + '"';
+    let ai = null;
+    try{ ai = await freeAI(prompt); }catch(e){}
+    const loc = (ai && ai.trim()) ? ai.trim() : localAnswer(text);
+    reply('💬','Suno', escapeHtml(loc).replace(/\n/g,'<br>'));
     say(loc);
     addHistory(text, 'Jawab: ' + loc.slice(0, 40));
     status('Mic dabao aur bolo');
@@ -1365,6 +1373,8 @@ function localAnswer(said){
     return "Mera naam Suno hai. Main tumhari assistant hoon — bolo ya likho, main jawab dungi.";
   if (/(kaise ho|kya hal|kya haal|namaste|hello|hi\b)/.test(t))
     return "Main theek hoon. Tum batao — kya karna hai?";
+  if (/(kya kya kar|kya kar sak|capabilit|features|kaam kya|kya kya hota)/.test(t))
+    return "Main ye sab kar sakti hoon:\n• YouTube, Google, WhatsApp, Instagram jaisi app kholna\n• phone se call dial, SMS/WhatsApp message likhna\n• mausam, time, date batana\n• notes rakhna, timer lagana\n• market ka haal (Nifty, Bank Nifty, koi bhi share)\n• tumhare poore system ke baare me jawab dena\n• aur koi bhi sawal — likho ya bolo.";
   if (/(sun sakte|sun sakti|sunna|mic)/.test(t))
     return "Haan, main sun sakti hoon. Mic dabao aur bolo — pehli baar browser permission maangega, usme Allow karna.";
   if (/(market|nifty|sensex|reliance|share|bhav)/.test(t))
@@ -1376,6 +1386,25 @@ function localAnswer(said){
   if (/(time|samay|baje)/.test(t)) { const d=new Date(); return "Abhi " + d.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}) + " baje hain."; }
   if (/(date|tareekh|aaj)/.test(t)) { const d=new Date(); return "Aaj " + d.toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"}) + " hai."; }
   return "Main samajh rahi hoon tumne kaha: \"" + String(said).slice(0,50) + "\". Thoda saaf bolo ya doosre shabdon me bolo, main dhyan se sun rahi hoon.";
+}
+
+async function freeAI(prompt){
+  const base = "https://text.pollinations.ai/" + encodeURIComponent(prompt) + "?model=openai";
+  const tries = [base,
+    "https://api.allorigins.win/raw?url=" + encodeURIComponent(base),
+    "https://corsproxy.io/?" + encodeURIComponent(base)];
+  for (const u of tries){
+    try{
+      const ctl = new AbortController();
+      const to = setTimeout(()=>ctl.abort(), 12000);
+      const r = await fetch(u, { cache:"no-store", signal: ctl.signal });
+      clearTimeout(to);
+      if (!r.ok) continue;
+      const t = (await r.text() || "").trim();
+      if (t.length > 3 && !/^<!doctype|^<html/i.test(t)) return t;
+    }catch(e){}
+  }
+  return null;
 }
 
 /* ================= optional AI samajhne wala ================= */
