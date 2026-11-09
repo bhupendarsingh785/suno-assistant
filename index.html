@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v23</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v24</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -430,7 +430,12 @@ function buildRec(){
     if (interim) $('transcript').innerHTML = '<span class="interim">'+escapeHtml(interim)+'</span>';
     if (final){
       $('transcript').textContent = final;
-      handle(final);
+      try{
+        handle(final);
+      }catch(err){
+        reply('⚠️','Andar dikkat', escapeHtml(String(err && err.message || err)).slice(0,140));
+        status('Dikkat aayi — likh kar bhejo', 'err');
+      }
     }
   };
   r.onerror = (ev) => {
@@ -1123,6 +1128,12 @@ if (_mc) _mc.onclick = async () => {
     out.innerHTML = rows.join('<br>');
   }
 };
+function safeHandle(txt){
+  try{ handle(txt); }
+  catch(err){
+    reply('⚠️','Andar dikkat', escapeHtml(String(err && err.message || err)).slice(0,140));
+  }
+}
 $('typeGo').onclick = ()=>{
   const v = $('typeIn').value.trim();
   if (!v) return;
