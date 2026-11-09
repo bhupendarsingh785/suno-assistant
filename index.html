@@ -1,7 +1,7 @@
   // ---- open site / browser (phone ka app pehle)
   const site = findSite(t);
   const openVerb = /\b(open|kholo|khol|chalao|launch|start|jao)\b/.test(t) || /(खोलो|खोल|चालू|चला|खोलें)/.test(t);
-  if (site && openVerb){
+  if (site && openVerb && !state._voice){
     const key = (site.name || '').toLowerCase();
     const used = openApp(key, site.url);
     reply('📱', site.name, used === 'app'
@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v38</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v39</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -480,6 +480,7 @@ function buildRec(){
   return r;
 }
 async function speakReplySafe(said){
+  state._voice = true;
   // awaaz se aaya text: pehle turant local jawab, phir AI se behtar
   const txt = String(said || '').trim();
   if (!txt) return;
