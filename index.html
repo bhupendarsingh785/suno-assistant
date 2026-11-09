@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v28</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v29</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -296,6 +296,7 @@
       <select id="setAiProv">
         <option value="none">Band (default)</option>
         <option value="gemini">Google Gemini</option>
+        <option value="anthropic">Anthropic (Claude)</option>
         <option value="openai">OpenAI</option>
       </select>
       <input id="setAiKey" placeholder="API key (optional)" style="margin-top:8px" autocomplete="off" />
@@ -1516,6 +1517,20 @@ async function apiCall(provider, key, model, prompt, ms){
       const j = await r.json();
       if (j.error) throw new Error(j.error.message || 'gemini error');
       const t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts[0].text;
+      if (!t) throw new Error('khaali');
+      return t.trim();
+    }
+    if (provider === 'anthropic'){
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'x-api-key': key, 'anthropic-version':'2023-06-01',
+                  'anthropic-dangerous-direct-browser-access':'true' },
+        body: JSON.stringify({ model: model || 'claude-3-5-haiku-20241022', max_tokens: 900,
+          messages:[{ role:'user', content: prompt }] }),
+        signal: ctl.signal });
+      const j = await r.json();
+      if (j.error) throw new Error(j.error.message || 'anthropic error');
+      const t = j.content && j.content[0] && j.content[0].text;
       if (!t) throw new Error('khaali');
       return t.trim();
     }
