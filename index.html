@@ -503,7 +503,7 @@ function buildRec(){
           $('transcript').textContent = said;
           speakReplySafe(said);
         }
-      }, 1200);
+      }, 700);
     }
     if (final){
       clearTimeout(interimTimer);
@@ -766,7 +766,7 @@ function openApp(key, fallbackUrl, query){
     if (!left && !document.hidden && Date.now() - started < 3000){
       openUrl(fallbackUrl);
     }
-  }, 1200);
+  }, 700);
   return 'app';
 }
 
@@ -1173,9 +1173,11 @@ async function handle(raw, _depth){
     status('Soch rahi hoon…', 'busy');
     let ai = null;
     try{
-      const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant. Roman Hindi me 2-3 chhoti line me seedha jawab do, '
-        + 'aakhir me ek chhota sawal. Swag ne kaha: "' + text + '"';
-      ai = await apiAsk(prompt, 12000);
+      const prompt = 'Tum "Suno" ho — Swag ki apni Hinglish assistant, ek Indian ladki jaisi (Delhi/Mumbai style). '
+        + 'Roman Hindi me baat karo — jaise "arre", "yaar", "achha", "haan na", "matlab" jaise aam bolchaal ke shabd. '
+        + '2-3 chhoti line me seedha jawab do, kitaabi Hindi bilkul nahi, aur aakhir me ek chhota sawal poochho. '
+        + 'Swag ne kaha: "' + text + '"';
+      ai = await apiAsk(prompt, 9000);
     }catch(e){}
     const finalText = (ai && ai.trim()) ? ai.trim() : loc;
     reply('💬','Suno', escapeHtml(finalText).replace(/\n/g,'<br>'));
@@ -1529,9 +1531,9 @@ async function smartReply(txt, opts){
   let ai = null;
   try{
     const past = (state.history || []).slice(0,4).map(h => h.cmd).join(' | ');
-    const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant, ek dost jaisi, thodi girlish. '
-      + 'Roman Hindi me 2-3 chhoti line me seedha jawab do, aur aakhir me ek chhota sawal poochho. '
-      + 'Bilkul insaan ki tarah baat karo, robot jaisa nahi. '
+    const prompt = 'Tum "Suno" ho — Swag ki apni Hinglish assistant, ek Indian ladki jaisi (Delhi/Mumbai style), thodi girlish. '
+      + 'Roman Hindi me baat karo — "arre", "yaar", "achha", "haan na", "matlab", "bas" jaise aam bolchaal ke shabd use karo. '
+      + 'Kitaabi ya formal Hindi bilkul nahi. 2-3 chhoti line me seedha jawab do, aakhir me ek chhota sawal poochho. '
       + (past ? 'Pichhli baatein: ' + past + '. ' : '')
       + 'Swag ne kaha: "' + said + '"';
     ai = await apiAsk(prompt, 14000);
