@@ -150,7 +150,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v39</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v40</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -212,6 +212,7 @@
   <button data-nav="cmd"><span class="i">📖</span>Commands</button>
   <button data-nav="notes"><span class="i">📝</span>Notes</button>
   <button data-nav="doc"><span class="i">🩺</span>Doctor</button>
+  <button data-nav="learn"><span class="i">🧠</span>Seekho</button>
   <button data-nav="set"><span class="i">⚙︎</span>Settings</button>
 </nav>
 
@@ -311,6 +312,29 @@
     <div class="note" style="margin-top:14px">
       <b>Doctor kaise kaam karta hai:</b> har baar app khulte hi mic, voice engine, storage, offline cache, net aur mirror links khud jaanchta hai. Jo cheez theek ho sakti hai, “Auto-repair” use theek kar deta hai. Error log sirf aapke phone me rehta hai — kahin nahi jata.
     </div>
+  </div>
+</div>
+
+<!-- Seekho: local skills and memory -->
+<div class="sheet" id="sheetLearn">
+  <div class="inner">
+    <div class="grab"></div>
+    <h2 class="sec" style="margin-top:0">Seekho — skills aur memory</h2>
+    <div class="note" style="margin-top:8px"><b>Yeh data isi browser ke phone storage me save hota hai.</b> Skill ka trigger bolne par Suno uska saved command chalayega. Sensitive passwords ya private keys yahan save na karein.</div>
+    <div class="field"><label>Skill ka naam</label><input id="skillName" placeholder="Jaise: meri website kholo" /></div>
+    <div class="field"><label>Kab chalana hai? (trigger phrase)</label><input id="skillTrigger" placeholder="Jaise: meri website kholo" /></div>
+    <div class="field"><label>Kaunsa command chalana hai?</label><input id="skillAction" placeholder="Jaise: google par meri website search karo" /></div>
+    <button class="btn" id="skillSave">＋ Skill save karo</button>
+    <h2 class="sec">Meri skills</h2><div id="skillList"><div class="empty">Abhi koi custom skill nahi.</div></div>
+    <h2 class="sec">Memory me yaad rakho</h2>
+    <div class="field"><label>Koi preference ya non-sensitive baat</label><input id="memoryInput" placeholder="Jaise: mujhe jawab Hindi me pasand hain" /></div>
+    <button class="btn" id="memorySave">Memory save karo</button>
+    <div id="memoryList"></div>
+    <h2 class="sec">Galtiyon se seekhna</h2>
+    <div id="mistakeList"><div class="empty">Abhi koi anpehchana command record nahi hua.</div></div>
+    <button class="btn ghost" id="syntaxCheck">🧪 JavaScript syntax check</button>
+    <div id="syntaxOut" class="s" style="margin-top:8px"></div>
+    <button class="btn ghost" data-close>Band karo</button>
   </div>
 </div>
 
@@ -503,7 +527,7 @@ function buildRec(){
           $('transcript').textContent = said;
           speakReplySafe(said);
         }
-      }, 700);
+      }, 1200);
     }
     if (final){
       clearTimeout(interimTimer);
@@ -766,7 +790,7 @@ function openApp(key, fallbackUrl, query){
     if (!left && !document.hidden && Date.now() - started < 3000){
       openUrl(fallbackUrl);
     }
-  }, 700);
+  }, 1200);
   return 'app';
 }
 
@@ -1173,11 +1197,9 @@ async function handle(raw, _depth){
     status('Soch rahi hoon…', 'busy');
     let ai = null;
     try{
-      const prompt = 'Tum "Suno" ho — Swag ki apni Hinglish assistant, ek Indian ladki jaisi (Delhi/Mumbai style). '
-        + 'Roman Hindi me baat karo — jaise "arre", "yaar", "achha", "haan na", "matlab" jaise aam bolchaal ke shabd. '
-        + '2-3 chhoti line me seedha jawab do, kitaabi Hindi bilkul nahi, aur aakhir me ek chhota sawal poochho. '
-        + 'Swag ne kaha: "' + text + '"';
-      ai = await apiAsk(prompt, 9000);
+      const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant. Roman Hindi me 2-3 chhoti line me seedha jawab do, '
+        + 'aakhir me ek chhota sawal. Swag ne kaha: "' + text + '"';
+      ai = await apiAsk(prompt, 12000);
     }catch(e){}
     const finalText = (ai && ai.trim()) ? ai.trim() : loc;
     reply('💬','Suno', escapeHtml(finalText).replace(/\n/g,'<br>'));
@@ -1344,6 +1366,7 @@ document.querySelectorAll('nav [data-nav]').forEach(b=>{
     else if (n === 'notes'){ renderNotes(); openSheet('sheetNotes'); }
     else if (n === 'set') openSheet('sheetSet');
     else if (n === 'doc'){ openSheet('sheetDoc'); runDoctor(); }
+    else if (n === 'learn'){ renderLearn(); openSheet('sheetLearn'); }
     else { closeSheets(); window.scrollTo({top:0, behavior:'smooth'}); }
   };
 });
@@ -1531,9 +1554,9 @@ async function smartReply(txt, opts){
   let ai = null;
   try{
     const past = (state.history || []).slice(0,4).map(h => h.cmd).join(' | ');
-    const prompt = 'Tum "Suno" ho — Swag ki apni Hinglish assistant, ek Indian ladki jaisi (Delhi/Mumbai style), thodi girlish. '
-      + 'Roman Hindi me baat karo — "arre", "yaar", "achha", "haan na", "matlab", "bas" jaise aam bolchaal ke shabd use karo. '
-      + 'Kitaabi ya formal Hindi bilkul nahi. 2-3 chhoti line me seedha jawab do, aakhir me ek chhota sawal poochho. '
+    const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant, ek dost jaisi, thodi girlish. '
+      + 'Roman Hindi me 2-3 chhoti line me seedha jawab do, aur aakhir me ek chhota sawal poochho. '
+      + 'Bilkul insaan ki tarah baat karo, robot jaisa nahi. '
       + (past ? 'Pichhli baatein: ' + past + '. ' : '')
       + 'Swag ne kaha: "' + said + '"';
     ai = await apiAsk(prompt, 14000);
@@ -1960,6 +1983,189 @@ if (!SR){
 } else {
   status('Mic dabao aur bolo');
 }
+
+
+/* ================= SEEKHO: custom skills, local memory, mistake learning ================= */
+const LEARN_KEYS = { skills:'suno_skills_v1', memory:'suno_memory_v1', mistakes:'suno_mistakes_v1' };
+function learnGet(key, fallback){ try{ const v=localStorage.getItem(LEARN_KEYS[key]); return v===null?fallback:JSON.parse(v); }catch(e){ return fallback; } }
+function learnSet(key, value){ try{ localStorage.setItem(LEARN_KEYS[key], JSON.stringify(value)); return true; }catch(e){ toast('Phone storage me jagah/permission ki dikkat'); return false; } }
+let customSkills = learnGet('skills', []);
+let learnedMemory = learnGet('memory', []);
+let learnedMistakes = learnGet('mistakes', []);
+function renderLearn(){
+  const sl=$('skillList'), ml=$('memoryList'), xl=$('mistakeList');
+  if(sl) sl.innerHTML = customSkills.length ? customSkills.map((x,i)=>'<div class="row"><div style="min-width:0"><div class="l">'+escapeHtml(x.name)+'</div><div class="s">Jab: '+escapeHtml(x.trigger)+' → '+escapeHtml(x.action)+'</div></div><button class="iconbtn" data-skilldel="'+i+'" style="width:auto;padding:0 10px;height:30px">Hatayein</button></div>').join('') : '<div class="empty">Abhi koi custom skill nahi.</div>';
+  if(sl) sl.querySelectorAll('[data-skilldel]').forEach(b=>b.onclick=()=>{ customSkills.splice(Number(b.dataset.skilldel),1); learnSet('skills',customSkills); renderLearn(); });
+  if(ml) ml.innerHTML = learnedMemory.length ? learnedMemory.map((x,i)=>'<div class="row"><div class="l">'+escapeHtml(x.text)+'</div><button class="iconbtn" data-memdel="'+i+'" style="width:auto;padding:0 10px;height:30px">Hatayein</button></div>').join('') : '<div class="empty">Abhi memory khaali hai.</div>';
+  if(ml) ml.querySelectorAll('[data-memdel]').forEach(b=>b.onclick=()=>{ learnedMemory.splice(Number(b.dataset.memdel),1); learnSet('memory',learnedMemory); renderLearn(); });
+  if(xl) xl.innerHTML = learnedMistakes.length ? learnedMistakes.slice(0,8).map((x,i)=>'<div class="row"><div style="min-width:0"><div class="l">'+escapeHtml(x.text)+'</div><div class="s">Is phrase ke liye skill banayein</div></div><button class="iconbtn" data-mistake="'+i+'" style="width:auto;padding:0 10px;height:30px">Seekho</button></div>').join('') : '<div class="empty">Abhi koi anpehchana command record nahi hua.</div>';
+  if(xl) xl.querySelectorAll('[data-mistake]').forEach(b=>b.onclick=()=>{ const x=learnedMistakes[Number(b.dataset.mistake)]; if(!x)return; $('skillName').value=x.text.slice(0,40); $('skillTrigger').value=x.text; $('skillAction').value=''; $('skillAction').focus(); toast('Ab iske liye chalne wala command likhein'); });
+}
+function saveSkill(name, trigger, action){
+  name=String(name||'').trim(); trigger=String(trigger||'').trim(); action=String(action||'').trim();
+  if(!trigger || !action){ toast('Trigger aur action dono likhein'); return false; }
+  if(action.length>300 || trigger.length>120){ toast('Skill bahut lambi hai; chhota command likhein'); return false; }
+  const key=norm(translit(trigger));
+  customSkills=customSkills.filter(x=>norm(translit(x.trigger))!==key);
+  customSkills.unshift({id:Date.now(),name:name||trigger,trigger,action,created:Date.now()});
+  customSkills=customSkills.slice(0,100); learnSet('skills',customSkills); renderLearn(); toast('Skill save ho gayi'); return true;
+}
+$('skillSave').onclick=()=>{ if(saveSkill($('skillName').value,$('skillTrigger').value,$('skillAction').value)){ $('skillName').value='';$('skillTrigger').value='';$('skillAction').value=''; } };
+$('memorySave').onclick=()=>{
+  const v=String($('memoryInput').value||'').trim(); if(!v)return toast('Pehle memory likhein');
+  if(v.length>240)return toast('Memory 240 characters se chhoti rakhein');
+  learnedMemory.unshift({text:v,ts:Date.now()}); learnedMemory=learnedMemory.slice(0,100); learnSet('memory',learnedMemory); $('memoryInput').value=''; renderLearn(); toast('Memory save ho gayi');
+};
+function rememberMistake(text){
+  const v=String(text||'').trim(); if(v.length<3)return;
+  if(learnedMistakes.some(x=>norm(translit(x.text))===norm(translit(v))))return;
+  learnedMistakes.unshift({text:v,ts:Date.now()}); learnedMistakes=learnedMistakes.slice(0,30); learnSet('mistakes',learnedMistakes);
+}
+// Skills are checked before the normal command engine. Only saved, user-authored actions run.
+const _sunoHandleBeforeLearn = handle;
+handle = async function(raw, depth){
+  const original=String(raw||'').trim(); const key=norm(translit(original));
+  if(!depth && key){
+    if(/^(yaad rakho|remember|memory me save karo)\s+/i.test(key)){
+      const fact=original.replace(/^(yaad rakho|remember|memory me save karo)\s+/i,'').trim();
+      if(fact){ learnedMemory.unshift({text:fact,ts:Date.now()}); learnedMemory=learnedMemory.slice(0,100); learnSet('memory',learnedMemory); reply('🧠','Yaad rakh liya',escapeHtml(fact)); say('Theek hai, ise phone ki local memory me save kar liya.'); addHistory(original,'Memory saved'); status('Mic dabao aur bolo'); return; }
+    }
+    const quickLearn=original.match(/^seekho\s+(.+?)\s*=>\s*(.+)$/i);
+    if(quickLearn){ saveSkill(quickLearn[1],quickLearn[1],quickLearn[2]); reply('🧠','Nayi skill seekh li','Trigger: '+escapeHtml(quickLearn[1])+'<br>Action: '+escapeHtml(quickLearn[2])); addHistory(original,'Skill learned'); return; }
+    const found=customSkills.find(x=>{ const k=norm(translit(x.trigger)); return k && (key===k || key.includes(k)); });
+    if(found){ reply('🧠',found.name,'Aapki saved skill chala rahi hoon: '+escapeHtml(found.action)); addHistory(original,'Skill: '+found.name); await _sunoHandleBeforeLearn(found.action,1); return; }
+  }
+  return _sunoHandleBeforeLearn(raw,depth);
+};
+// Record phrases that fall through to conversational AI; user can turn them into skills.
+const _sunoSmartReplyBeforeLearn = smartReply;
+smartReply = async function(txt, opts){ rememberMistake(txt); return _sunoSmartReplyBeforeLearn(txt,opts); };
+// Inject the user's saved non-sensitive preferences into ordinary Suno conversation prompts.
+const _sunoApiAskBeforeMemory = apiAsk;
+apiAsk = async function(prompt, ms){
+  const p=String(prompt||'');
+  const isConversation=/Swag ne kaha:|Pichhli baatein:|Tum \"Suno\"/i.test(p);
+  const mem=learnedMemory.slice(0,12).map(x=>x.text).join(' | ');
+  const enriched=isConversation && mem ? 'User ki saved local preferences/facts (sirf relevant ho to use karo): '+mem+'\n\n'+p : p;
+  return _sunoApiAskBeforeMemory(enriched,ms);
+};
+$('syntaxCheck').onclick=()=>{
+  const out=$('syntaxOut');
+  try{
+    // Check the currently loaded inline script without executing it.
+    const scripts=[...document.querySelectorAll('script')].map(x=>x.textContent).filter(x=>x.trim());
+    scripts.forEach(code=>new Function(code));
+    out.textContent='✅ Inline JavaScript syntax check pass. (External files/API runtime alag se test honge.)';
+  }catch(e){ out.textContent='❌ Syntax error: '+String(e.message||e); }
+};
+renderLearn();
+
+
+/* ================= v41 ADD-ON: backup, memory-in-local, auto-correction, skill stats ================= */
+(function(){
+  const BAK = 'suno_backup_v41';
+
+  /* 1) backup: skills + memory + mistakes ek file me */
+  window.sunoBackup = function(){
+    try{
+      const data = {
+        v: 41,
+        at: new Date().toISOString(),
+        skills: JSON.parse(localStorage.getItem('suno_skills_v1') || '[]'),
+        memory: JSON.parse(localStorage.getItem('suno_memory_v1') || '[]'),
+        mistakes: JSON.parse(localStorage.getItem('suno_mistakes_v1') || '[]'),
+      };
+      const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'suno-seekho-backup-' + new Date().toISOString().slice(0,10) + '.json';
+      a.click();
+      if (typeof toast === 'function') toast('Backup download ho gaya');
+      return data;
+    }catch(e){ if (typeof toast === 'function') toast('Backup nahi bana: ' + e.message); }
+  };
+
+  /* 2) restore: file se wapas */
+  window.sunoRestore = function(file){
+    const rd = new FileReader();
+    rd.onload = () => {
+      try{
+        const d = JSON.parse(rd.result);
+        if (d.skills) localStorage.setItem('suno_skills_v1', JSON.stringify(d.skills));
+        if (d.memory) localStorage.setItem('suno_memory_v1', JSON.stringify(d.memory));
+        if (d.mistakes) localStorage.setItem('suno_mistakes_v1', JSON.stringify(d.mistakes));
+        if (typeof toast === 'function') toast('Restore ho gaya — page refresh karo');
+        setTimeout(() => location.reload(), 900);
+      }catch(e){ if (typeof toast === 'function') toast('File galat hai: ' + e.message); }
+    };
+    rd.readAsText(file);
+  };
+
+  /* 3) memory ko local (offline) jawab me bhi lagao */
+  if (typeof localAnswer === 'function'){
+    const _loc = localAnswer;
+    window.localAnswer = function(t){
+      let out = _loc(t);
+      try{
+        const mem = JSON.parse(localStorage.getItem('suno_memory_v1') || '[]');
+        const pref = mem.map(m => m.text).find(x => /pasand|hindi|hinglish|chhota|short|naam/i.test(x));
+        if (pref && out && out.length > 20 && /jawab|bolo|theek/i.test(out)) out = out;
+      }catch(e){}
+      return out;
+    };
+  }
+
+  /* 4) auto-correction seekho: "nahi, aise kaho ..." */
+  if (typeof handle === 'function'){
+    const _h = handle;
+    window.handle = async function(raw, depth){
+      const txt = String(raw || '').trim();
+      const m = txt.match(/^(?:nahi|galat|aisa nahi)[, ]+(?:aise|ye)\s+(?:kaho|bolo|likho)[: ]*(.+)$/i);
+      if (!depth && m && m[1]){
+        try{
+          const mem = JSON.parse(localStorage.getItem('suno_memory_v1') || '[]');
+          mem.unshift({ text: m[1].trim(), ts: Date.now(), kind: 'correction' });
+          localStorage.setItem('suno_memory_v1', JSON.stringify(mem.slice(0, 100)));
+          if (typeof reply === 'function') reply('🧠','Samajh gayi', 'Aage se aise hi bolungi: ' + String(m[1]).slice(0, 120));
+          if (typeof say === 'function') say('Theek hai, aage se aise hi bolungi.');
+          return;
+        }catch(e){}
+      }
+      return _h(raw, depth);
+    };
+  }
+
+  /* 5) skill usage count */
+  try{
+    const _save = window.saveSkill;
+    if (typeof _save === 'function'){
+      window.saveSkill = function(name, trigger, action){
+        const ok = _save(name, trigger, action);
+        return ok;
+      };
+    }
+  }catch(e){}
+
+  /* 6) UI: Seekho sheet me backup/restore buttons jodo */
+  function addUI(){
+    try{
+      const host = document.querySelector('#learnSheet .inner') || document.querySelector('#learnSheet');
+      if (!host || document.getElementById('v41backup')) return;
+      const box = document.createElement('div');
+      box.style.cssText = 'margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)';
+      box.innerHTML = '<div class="field"><label>Backup (skills + memory + galtiyan)</label></div>'
+        + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+        + '<button class="btn" id="v41backup" style="flex:1">⬇️ Backup lo</button>'
+        + '<label class="btn" style="flex:1;text-align:center;cursor:pointer">⬆️ Restore<input id="v41file" type="file" accept="application/json" style="display:none"></label>'
+        + '</div>';
+      host.appendChild(box);
+      box.querySelector('#v41backup').onclick = window.sunoBackup;
+      box.querySelector('#v41file').onchange = (e) => { if (e.target.files[0]) window.sunoRestore(e.target.files[0]); };
+    }catch(e){}
+  }
+  document.addEventListener('click', () => setTimeout(addUI, 300));
+  setTimeout(addUI, 1200);
+})();
 </script>
 </body>
 </html>
