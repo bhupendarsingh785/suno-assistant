@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v31</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v32</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -516,7 +516,6 @@ async function startListening(silent){
     if (!ok) return;
   }
   micOn = true;
-  keepScreenAwake();
   runRec();
 }
 
@@ -1104,7 +1103,25 @@ async function handle(raw, _depth){
 }
 
 /* ============ UI wiring ============ */
-$('mic').onclick = ()=>{ if (micOn) stopListening(); else startListening(); };
+$('mic').onclick = async () => {
+  // OFF karna hai
+  if (micOn){
+    stopListening();
+    releaseScreen();
+    $('micLabel').textContent = 'BOLO';
+    status('Mic band');
+    return;
+  }
+  // ON karna hai
+  if (!SR){
+    status('Is browser me voice nahi — Chrome use karo', 'err');
+    return;
+  }
+  const ok = await ensureMic();
+  if (!ok) return;
+  micOn = true;
+  runRec();
+};
 
 const _sr = document.getElementById('speakReply');
 if (_sr) _sr.onclick = () => {
