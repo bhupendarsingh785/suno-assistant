@@ -479,6 +479,10 @@ function say(text, _retry){
         u.onend = () => {
           // auto mode: jawab ke baad phir sunna shuru karo
           try{
+            if (state.always){
+              try{ if (!alwaysRec){ startAlways(); } }catch(e){}
+              return;
+            }
             if (state.auto && !state.listening && typeof startListening === "function"){
               setTimeout(() => { try{ startListening(); }catch(e){} }, 450);
             }
@@ -1279,6 +1283,11 @@ const alwaysBtn = $('alwaysBtn');
 function paintAlways(){
   if (!alwaysBtn) return;
   alwaysBtn.textContent = state.always ? '🔁 Always sun rahi hoon — ON (band karne ke liye dabao)' : '🔁 Always sunta rahe — BAND';
+  try{
+    const lab = $('micLabel'); const ic = $('micIcon');
+    if (lab) lab.textContent = state.always ? 'LIVE' : 'BOLO';
+    if (ic) ic.textContent = state.always ? '🔴' : '🎙️';
+  }catch(e){}
   alwaysBtn.style.borderColor = state.always ? 'rgba(34,197,94,.6)' : '';
   alwaysBtn.style.color = state.always ? '#22c55e' : '';
   $('levelWrap').style.display = state.always ? 'block' : 'none';
@@ -1389,7 +1398,29 @@ function stopAlways(){
   stopLevelMeter();
 }
 
-$('mic').onclick = ()=>startListening();
+/* mic = LIVE conversation mode (jaise ChatGPT/Gemini voice) */
+function toggleLive(){
+  state.always = !state.always;
+  LS.set('always', state.always);
+  paintAlways();
+  if (state.always){
+    toast('LIVE chalu — bolo, main sunti rahungi');
+    startAlways();
+    camStart();
+  } else {
+    stopAlways();
+    camStop();
+    toast('LIVE band');
+  }
+}
+$('mic').onclick = toggleLive;
+let _lpTimer = null, _lpFired = false;
+$('mic').addEventListener('pointerdown', () => {
+  _lpFired = false;
+  _lpTimer = setTimeout(() => { _lpFired = true; if (!state.always) toggleLive(); }, 450);
+});
+$('mic').addEventListener('pointerup', () => { clearTimeout(_lpTimer); });
+$('mic').addEventListener('pointerleave', () => { clearTimeout(_lpTimer); });
 $('typeGo').onclick = ()=>{
   const v = $('typeIn').value.trim();
   if (!v) return;
