@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="hi"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Suno — mirror portal</title>
+<style>
+ body{background:#0b0f19;color:#eef2fb;font-family:system-ui,sans-serif;margin:0;padding:28px 20px;max-width:520px;margin:auto}
+ h1{font-size:19px;margin:0 0 4px} p{color:#93a0bd;font-size:13px;line-height:1.6}
+ .r{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#151c2c;border:1px solid #243049;border-radius:14px;padding:12px;margin:10px 0;font-size:12.5px}
+ .r b{font-weight:600;word-break:break-all} .s{font-size:11px;color:#93a0bd;margin-top:3px}
+ a{background:#6d5efc;color:#fff;text-decoration:none;padding:9px 14px;border-radius:10px;font-size:12px;white-space:nowrap}
+ .ok{color:#34d399}.bad{color:#f87171}.wait{color:#fbbf24}
+</style></head><body>
+<h1>Suno — mirror portal</h1>
+<p>Ye page sabhi mirror ko jaanchta hai aur jo pehla chalu mile use khol deta hai. Ise bhi kisi ek mirror par rakh dein — ek link band ho jaye to ye dusra chala dega.</p>
+<div id="list"></div>
+<script>
+/* ===== YAHAN APNE MIRROR LINKS DAALEIN ===== */
+const MIRRORS = [
+  "https://bhupendarsingh785.github.io/swag-page/suno/",
+  "https://<aapka-naam>.gitlab.io/suno/",
+  "https://<aapka-site>.netlify.app/"
+];
+const box = document.getElementById('list');
+MIRRORS.forEach((u,i)=>{
+  const d = document.createElement('div');
+  d.className='r';
+  d.innerHTML = '<div><b>'+u+'</b><div class="s wait" id="s'+i+'">jaanch ho rahi…</div></div>'+
+                '<a href="'+u+'">Kholo</a>';
+  box.appendChild(d);
+});
+(async()=>{
+  for (let i=0;i<MIRRORS.length;i++){
+    const st = document.getElementById('s'+i);
+    try{
+      const c = new AbortController(); const t = setTimeout(()=>c.abort(), 6000);
+      await fetch(MIRRORS[i], {mode:'no-cors', cache:'no-store', signal:c.signal});
+      clearTimeout(t);
+      st.textContent = 'chalu hai'; st.className='s ok';
+      if (i === 0 && location.search.indexOf('stay') === -1){ setTimeout(()=>{ location.href = MIRRORS[0]; }, 700); }
+    }catch(e){ st.textContent = 'jawab nahi de raha'; st.className='s bad'; }
+  }
+})();
+</script>
+</body></html>
