@@ -80,6 +80,12 @@
 <div class="bubble heard" id="heard">…</div>
 <div class="bubble reply" id="reply">Bolo, main sun rahi hoon.</div>
 
+<div class="row" style="width:100%;max-width:420px;gap:8px;flex-wrap:nowrap">
+  <input id="typeIn" placeholder="Ya likh kar bolo…" autocomplete="off"
+    style="flex:1;background:#0b1119;border:1px solid var(--line);color:var(--txt);padding:12px 14px;border-radius:13px;font-size:14.5px" />
+  <button class="btn" id="sendBtn" style="padding:12px 16px">Bhejo</button>
+</div>
+
 <div class="row">
   <button class="btn" id="lookBtn" style="display:none">👁️ Dekho</button>
   <button class="btn" id="clearBtn">Nayi baat</button>
@@ -242,7 +248,8 @@ async function answer(said){
     : mood === "happy" ? "Swag khush hai — halka-fulka, mazedaar jawab do."
     : mood === "urgent" ? "Swag jaldi chahta hai — chhota, seedha jawab do."
     : "";
-  const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant. Roman Hindi me, 2-3 chhoti line, seedha jawab. '
+  const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant, ek dost jaisi. Roman Hindi me, 2-3 chhoti line, seedha jawab. '
+    + 'Aise baat karo jaise insaan karta hai — garamjoshi se, aur aakhir me ek chhota sawal poochho taaki baat aage badhe. '
     + moodLine + " " + (past ? "Pichhli baat:\n" + past + "\n" : "") + 'Ab Swag ne kaha: "' + said + '"';
   let t = null;
   try{ t = await askAI(prompt, 12000); }catch(e){}
@@ -390,6 +397,18 @@ function stopMeter(){
 $("rateSel").onchange = (e) => { S.rate = Number(e.target.value) || 1; speak("Theek hai, isi raftaar se bolungi."); };
 $("memClear").onclick = () => { try{ SeetalCore.clear("chat"); }catch(e){} paintMem(); $("reply").textContent = "Yaaddasht saaf — nayi shuruaat."; };
 function paintMem(){ try{ $("memCount").textContent = SeetalCore.list("chat").length + " baatein"; }catch(e){} }
+/* likh kar bhejna */
+async function sendTyped(){
+  const el = $("typeIn");
+  const t = (el.value || "").trim();
+  if (t.length < 2) return;
+  el.value = "";
+  $("heard").textContent = t;
+  await answer(t);
+}
+$("sendBtn").onclick = sendTyped;
+$("typeIn").addEventListener("keydown", (e) => { if (e.key === "Enter") sendTyped(); });
+
 $("clearBtn").onclick = () => { $("heard").textContent = "…"; $("reply").textContent = "Bolo, main sun rahi hoon."; };
 
 try{ if (window.SeetalCore) SeetalCore.visit("suno-live"); }catch(e){}
