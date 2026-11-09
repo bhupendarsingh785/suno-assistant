@@ -4,7 +4,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Suno — Awaaz se Phone Control</title>
-<meta name="app-version" content="v3" />
 <meta name="theme-color" content="#0b0f19" />
 <meta name="description" content="Hindi/Hinglish voice assistant: browser kholo, call karo, search karo, notes, timer." />
 <link rel="manifest" href="manifest.webmanifest" />
@@ -143,23 +142,6 @@
   .timerbar.on{display:flex}
   .timerbar .t{font-variant-numeric:tabular-nums;font-weight:700;color:#fff}
 </style>
-
-<style>
-  /* ---- simple UI pass ---- */
-  .miczone{padding:26px 0 10px}
-  .mic{width:168px;height:168px;font-size:44px}
-  .mic small{font-size:12px;letter-spacing:2px}
-  .chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0;scrollbar-width:none}
-  .chips::-webkit-scrollbar{display:none}
-  .seetalrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 4px}
-  .seetalchip{display:block;text-align:center;padding:11px 8px;border-radius:14px;background:var(--card);
-    border:1px solid var(--line);color:var(--txt);text-decoration:none;font-size:13px;font-weight:600}
-  .seetalchip:active{background:var(--card2)}
-  details.more{margin-top:14px;border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:hidden}
-  details.more summary{padding:13px 14px;font-size:13.5px;font-weight:700;cursor:pointer;color:var(--muted)}
-  details.more[open] summary{border-bottom:1px solid var(--line)}
-  details.more #history, details.more .note{padding:0 14px}
-</style>
 </head>
 <body>
 <div class="wrap">
@@ -168,10 +150,9 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b id="verTag" style="color:#22d3ee">v4</b></p>
+        <p>Awaaz se phone control</p>
       </div>
     </div>
-    <a class="iconbtn" href="voice.html" title="Live baat karo" style="text-decoration:none">💬</a>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
   </header>
 
@@ -184,23 +165,6 @@
     </button>
   </div>
 
-  <div style="display:flex;gap:10px;justify-content:center;margin:6px 0 10px">
-    <button id="alwaysBtn" class="btn ghost" style="padding:12px 18px;border-radius:14px;font-size:14px;font-weight:800">
-      🔁 Always sunta rahe — BAND
-    </button>
-  </div>
-  <div id="levelWrap" style="max-width:280px;margin:0 auto 10px;display:none">
-    <div style="height:8px;background:#1a2432;border-radius:99px;overflow:hidden">
-      <div id="levelBar" style="height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#fbbf24,#f87171);transition:width .08s"></div>
-    </div>
-    <div class="sub" style="text-align:center;margin-top:4px" id="levelTxt">Awaaz ka level</div>
-  </div>
-
-  <div id="camWrap" style="max-width:280px;margin:0 auto 10px;display:none">
-    <video id="camView" autoplay playsinline muted style="width:100%;border-radius:14px;border:1px solid var(--line);background:#000"></video>
-    <button id="camLook" class="btn ghost" style="width:100%;margin-top:6px;padding:9px;border-radius:11px;font-size:13px">👁️ Mujhe dekho</button>
-  </div>
-
   <div class="transcript" id="transcript">Jaise: <b>“YouTube kholo”</b>, <b>“call karo 98765…”</b>, <b>“mausam batao”</b></div>
 
   <div class="card" id="replyCard">
@@ -211,9 +175,6 @@
         <span id="replyText">Main aapke phone par browser khol sakta hoon, search kar sakta hoon, call dial kar sakta hoon, WhatsApp/SMS bhej sakta hoon, map khol sakta hoon, notes aur timer rakh sakta hoon. Neeche koi bhi example dabao.</span>
       </div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn ghost" id="btnSpeakNow" style="flex:1">🔊 Awaaz me suno</button>
-    </div>
     <div class="timerbar" id="timerBar">⏱️ <span id="timerLeft" class="t">--:--</span> <span id="timerWhat" style="color:var(--muted)"></span>
       <button class="iconbtn" id="timerCancel" style="margin-left:auto;width:auto;padding:0 10px;height:30px;font-size:11.5px">Cancel</button>
     </div>
@@ -221,25 +182,17 @@
 
   <div class="chips" id="chips"></div>
 
-  <div class="seetalrow">
-    <a class="seetalchip" href="https://bhupendarsingh785.github.io/seetal-trader/" target="_blank" rel="noopener">📈 Seetal Trader</a>
-    <a class="seetalchip" href="https://bhupendarsingh785.github.io/seetal-trader/vault.html" target="_blank" rel="noopener">🔐 Vault</a>
-    <a class="seetalchip" href="https://bhupendarsingh785.github.io/seetal-trader/#doctor" target="_blank" rel="noopener">🩺 Doctor</a>
-    <a class="seetalchip" href="https://seetal-trader.netlify.app/" target="_blank" rel="noopener">🌐 Backup site</a>
-  </div>
-
   <div class="typer">
     <input id="typeIn" placeholder="Ya likh kar bolo…" autocomplete="off" />
     <button id="typeGo">Bhejo</button>
   </div>
 
-  <details class="more">
-    <summary>Pichhle kaam aur zaroori baat</summary>
-    <div id="history"><div class="empty">Abhi kuch nahi kiya.</div></div>
-    <div class="note">
-      <b>Dhyan rakhein:</b> browser app WiFi/Bluetooth on-off, dusre apps kholna, ya bina tap kiye call lagana — ye sab nahi kar sakta (phone permission nahi deta).
-    </div>
-  </details>
+  <h2 class="sec">Pichhle kaam</h2>
+  <div id="history"><div class="empty">Abhi kuch nahi kiya.</div></div>
+
+  <div class="note">
+    <b>Dhyan rakhein:</b> browser app WiFi/Bluetooth on-off, dusre apps kholna, ya bina tap kiye call lagana — ye sab nahi kar sakta (phone permission nahi deta). Jo ho sakta hai woh sab isi app me hai.
+  </div>
 </div>
 
 <nav>
@@ -320,14 +273,6 @@
       </select>
       <input id="setAiKey" placeholder="API key (optional)" style="margin-top:8px" autocomplete="off" />
       <input id="setAiModel" placeholder="model (optional, e.g. gemini-2.0-flash)" style="margin-top:8px" autocomplete="off" />
-      <button class="btn ghost" id="btnAiTest" style="margin-top:8px">AI test karo</button>
-      <button class="btn ghost" id="btnVoiceTest" style="margin-top:8px">🔊 Awaaz test karo</button>
-      <button class="btn ghost" id="btnSelfTest" style="margin-top:8px">🔧 Poora test karo (mic, camera, AI, awaaz)</button>
-      <div id="selfTestOut" style="font-size:12.5px;line-height:1.6;color:var(--muted);margin-top:8px"></div>
-      <select id="setVoice" style="margin-top:8px"></select>
-      <div class="note" style="margin-top:4px">Awaaz chuno — jo sabse saaf lage wahi rakho.</div>
-      <div id="voiceTestOut" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
-      <div id="aiTestOut" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
     </div>
     <button class="btn" id="setSave">Save karo</button>
     <button class="btn ghost" data-close>Band karo</button>
@@ -389,7 +334,6 @@ const state = {
   aiProvider: LS.get('aiProvider', 'none'),
   aiKey: LS.get('aiKey', ''),
   aiModel: LS.get('aiModel', ''),
-  voiceName: LS.get('voiceName', ''),
   listening: false,
   timer: null
 };
@@ -421,99 +365,16 @@ if ('speechSynthesis' in window){
   loadVoices();
   window.speechSynthesis.onvoiceschanged = loadVoices;
 }
-function pickVoice(){
+function say(text){
+  if (!state.speak || !('speechSynthesis' in window)) return;
   try{
-    if (!voices.length) loadVoices();
-    const want = (state.voiceName || "").trim();
-    if (want){
-      const exact = voices.find(v => v.name === want);
-      if (exact) return exact;
-    }
-    const base = (state.lang || "hi-IN").split("-")[0];
-    // Hindi voice ko sabse pehle tarjeeh
-    const hindi = voices.filter(v => (v.lang || "").toLowerCase().startsWith("hi"));
-    if (hindi.length){
-      // Google/India wali voice pehle
-      const g = hindi.find(v => /google|india/i.test(v.name)) || hindi[0];
-      return g;
-    }
-    const same = voices.find(v => (v.lang || "").toLowerCase() === (state.lang || "").toLowerCase());
-    if (same) return same;
-    const anyBase = voices.find(v => (v.lang || "").toLowerCase().split("-")[0] === base);
-    if (anyBase) return anyBase;
-    const en = voices.find(v => (v.lang || "").toLowerCase().startsWith("en"));
-    return en || voices[0] || null;
-  }catch(e){ return null; }
-}
-
-function chunks(text, size){
-  const out = [];
-  let t = String(text || "").replace(/\s+/g, " ").trim();
-  while (t.length > size){
-    let cut = t.lastIndexOf(". ", size);
-    if (cut < size * 0.5) cut = t.lastIndexOf(" ", size);
-    if (cut < size * 0.5) cut = size;
-    out.push(t.slice(0, cut + 1).trim());
-    t = t.slice(cut + 1).trim();
-  }
-  if (t) out.push(t);
-  return out;
-}
-
-function say(text, _retry){
-  if (!state.speak || !('speechSynthesis' in window) || !text) return;
-  try{
-    state.speaking = true;
-    state._lastSpoken = String(text).slice(0, 400);
-    // apni hi awaaz na sune — bolne se pehle mic rok do
-    try{ if (alwaysRec){ alwaysRec.onend = null; alwaysRec.stop(); alwaysRec = null; } }catch(e){}
-    try{ if (rec && state.listening){ rec.stop(); } }catch(e){}
-    if (!voices.length) loadVoices();
-    const parts = chunks(text, 170);
-    if (!parts.length) return;
-
-    // pehle se bol raha hai to queue me jodo (kaat kar naya shuru mat karo)
-    const busy = window.speechSynthesis.speaking || window.speechSynthesis.pending;
-    if (!busy) window.speechSynthesis.cancel();
-
-    const v = pickVoice();
-    parts.forEach((part, i) => {
-      const u = new SpeechSynthesisUtterance(part);
-      u.lang = (v && v.lang) || state.lang || "hi-IN";
-      u.rate = Number(state.rate) || 1;
-      u.pitch = 1;
-      if (v) u.voice = v;
-      if (i === parts.length - 1){
-        u.onend = () => {
-          state.speaking = false;
-          // auto mode: jawab ke baad phir sunna shuru karo
-          try{
-            if (state.always){
-              setTimeout(()=>{
-                try{
-                  if (state.always && !state.speaking && !(window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending))) startAlways();
-                  else if (state.always) setTimeout(()=>{ try{ if (state.always) startAlways(); }catch(e){} }, 900);
-                }catch(e){}
-              }, 900);
-              return;
-            }
-            if (state.auto && !state.listening && typeof startListening === "function"){
-              setTimeout(() => { try{ startListening(); }catch(e){} }, 450);
-            }
-          }catch(e){}
-        };
-      }
-      window.speechSynthesis.speak(u);
-    });
-
-    // Android Chrome kabhi pehli baar chup rehta hai
-    if (!_retry){
-      setTimeout(()=>{
-        try{
-          if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) say(text, true);
-        }catch(e){}
-      }, 700);
-    }
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = state.lang; u.rate = Number(state.rate) || 1; u.pitch = 1;
+    const base = state.lang.split('-')[0];
+    const v = voices.find(v=>v.lang===state.lang) || voices.find(v=>v.lang && v.lang.split('-')[0]===base);
+    if (v) u.voice = v;
+    window.speechSynthesis.speak(u);
   }catch(e){}
 }
 
@@ -735,76 +596,6 @@ function cancelTimer(quiet){
 }
 $('timerCancel').onclick = ()=>cancelTimer();
 
-
-/* ---- Seetal Trader market data (Swag ka trading system) ---- */
-const MARKET_SOURCES = [
-  'https://bhupendarsingh785.github.io/seetal-trader/data/live.json',
-  'https://raw.githubusercontent.com/bhupendarsingh785/seetal-trader/main/data/live.json',
-  'https://cdn.jsdelivr.net/gh/bhupendarsingh785/seetal-trader@main/data/live.json',
-  'https://gitlab.com/Bhuprndar785/bhupendarsingh785/-/raw/main/data/live.json'
-];
-const MARKET_ALIAS = {
-  '^NSEI': ['nifty','निफ्टी'], '^NSEBANK': ['bank nifty','banknifty','बैंक निफ्टी'],
-  '^BSESN': ['sensex','सेंसेक्स'], 'RELIANCE.NS': ['reliance','रिलायंस'],
-  'TCS.NS': ['tcs','टीसीएस'], 'SBIN.NS': ['sbi','एसबीआई'], 'INFY.NS': ['infosys','इन्फोसिस'],
-  'HDFCBANK.NS': ['hdfc','एचडीएफसी'], 'ICICIBANK.NS': ['icici','आईसीआईसीआई'],
-  'ADANIENT.NS': ['adani','अदानी'], 'ITC.NS': ['itc','आईटीएसी'],
-  'AAPL': ['apple','एप्पल'], 'TSLA': ['tesla','टेस्ला'], 'NVDA': ['nvidia','एनवीडिया']
-};
-async function marketData(){
-  for (const u of MARKET_SOURCES){
-    try{
-      const r = await fetch(u + (u.includes('?')?'&':'?') + 't=' + Date.now(), {cache:'no-store'});
-      if(!r.ok) continue;
-      const d = await r.json();
-      if (d && Array.isArray(d.rows) && d.rows.length) return d;
-    }catch(e){}
-  }
-  return null;
-}
-function marketNum(n){
-  return (n===null||n===undefined||isNaN(n)) ? '—' : Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-}
-async function marketAnswer(t){
-  const d = await marketData();
-  if (!d) return {title:'Market data nahi mila', body:'Seetal Trader ka data abhi nahi khul raha. Baad me try karo.', speech:'Market ka data abhi nahi mil raha.'};
-  const rows = d.rows;
-  let hit = null;
-  for (const [sym, words] of Object.entries(MARKET_ALIAS)){
-    if (words.some(w => t.includes(w))) { hit = rows.find(r => r.symbol === sym) || null; if (hit) break; }
-  }
-  if (!hit){
-    for (const r of rows){
-      const base = r.symbol.replace('.NS','').replace('^','').toLowerCase();
-      if (base.length > 2 && t.replace(/\s/g,'').includes(base)) { hit = r; break; }
-    }
-  }
-  const nf = marketNum;
-  if (hit){
-    const dir = hit.change_pct > 0 ? 'upar' : hit.change_pct < 0 ? 'neeche' : 'flat';
-    let speech = hit.symbol.replace('.NS','').replace('^','') + ' ' + nf(hit.last) + ' par hai, ' + nf(Math.abs(hit.change_pct)) + ' percent ' + dir + '.';
-    if (hit.state === 'ENTRY'){
-      speech += ' Entry signal hai ' + nf(hit.entry) + ' par, stop ' + nf(hit.stop) + ', target ' + nf(hit.target) + '.';
-    } else if (hit.or_high){
-      speech += ' Entry abhi nahi. Range high ' + nf(hit.or_high) + ' se ' + nf(Math.abs(hit.distance_points)) + ' point door hai.';
-    }
-    return {
-      title: hit.symbol,
-      body: 'Last ' + nf(hit.last) + ' (' + (hit.change_pct>0?'+':'') + nf(hit.change_pct) + '%) · OR ' + nf(hit.or_low) + '–' + nf(hit.or_high) + ' · ' + hit.state,
-      speech
-    };
-  }
-  const idx = rows.filter(r => r.is_index);
-  const up = rows.filter(r => r.change_pct > 0).length;
-  const mood = up > rows.length/2 ? 'Market uth raha hai' : up < rows.length/2 ? 'Market gir raha hai' : 'Market flat hai';
-  const speech = mood + '. ' + idx.map(r => r.symbol.replace('^','') + ' ' + nf(r.last) + ', ' + (r.change_pct>0?'upar':'neeche') + ' ' + nf(Math.abs(r.change_pct)) + ' percent').join('. ') + '.';
-  return {
-    title: 'Market',
-    body: idx.map(r => r.symbol.replace('^','') + ': ' + nf(r.last) + ' (' + (r.change_pct>0?'+':'') + nf(r.change_pct) + '%)').join(' · '),
-    speech
-  };
-}
-
 /* weather */
 async function weather(city){
   try{
@@ -913,17 +704,6 @@ async function handle(raw, _depth){
     reply('📅', str, 'Aaj ki date.');
     say('Aaj '+str+' hai.');
     addHistory(text,'Date batayi'); status('Mic dabao aur bolo'); return;
-  }
-
-  // ---- Seetal Trader market
-  if (/(market|nifty|bank ?nifty|sensex|share|stock|bhav|bhaav|reliance|tcs|sbi|infosys|hdfc|adani|itc|tesla|apple|nvidia|मार्केट|निफ्टी|सेंसेक्स|भाव|शेयर)/.test(t)){
-    try{
-      say('Market ka data dekh rahi hoon.');
-      const ans = await marketAnswer(t);
-      reply('📈', ans.title, ans.body);
-      say(ans.speech);
-      return;
-    }catch(e){}
   }
 
   // ---- weather
@@ -1079,7 +859,7 @@ async function handle(raw, _depth){
     addHistory(text,'YouTube search: '+(q||'-')); status('Mic dabao aur bolo'); return;
   }
 
-  const smDev = false; // auto-search band - sirf neeche wali saaf command par chalega
+  const smDev = /(सर्च|खोजो|ढूंढो|खोजें)/.test(t);
   const sm = t.match(/\b(search|dhundo|dhoondo|dhundh|google|khojo)\b/) || (smDev ? ['सर्च'] : null);
   if (sm && (/\b(search|dhundo|dhoondo|dhundh|khojo)\b/.test(t) || smDev)){
     let q = stripWords(text, ['search','karo','kar','do','dhundo','dhoondo','dhundh','google','par','pe','me','mein','khojo','सर्च','खोजो','please','zara','kya','hai','he']);
@@ -1111,347 +891,28 @@ async function handle(raw, _depth){
     addHistory(text,'Browser open'); status('Mic dabao aur bolo'); return;
   }
 
-  // ---- feelings: mood padho, pehle uska naam lo
-  const sadRe = /(udaas|dukhi|pareshan|tension|thak|bore|akela|rona|bura lag|mann nahi|depress|stress)/;
-  const happyRe = /(khush|maza|acha laga|badhiya|great|shukriya|thanks|love|pyaar)/;
-  if (sadRe.test(t) && !/^(market|nifty)/.test(t)){
-    state._mood = 'sad';
-    const line = 'Sun rahi hoon. ' + (state.aiKey ? '' : 'Batao kya hua — main yahin hoon.');
-    if (!state.aiKey){ reply('🫂','Main yahin hoon', 'Jo bhi ho raha hai, batao. Main sunti hoon.'); say('Main yahin hoon. Batao kya hua.'); status('Mic dabao aur bolo'); return; }
-  }
-  if (happyRe.test(t)) state._mood = 'happy';
-
-  // ---- chhoti-moti baatein (small talk)
-  if (/(kaise ho|kaisa hai tu|kya haal|hello|hi suno|namaste)/.test(t)){
-    reply('😊','Main bilkul theek hoon', 'Bolo, kya karna hai?');
-    say('Main theek hoon. Bolo, kya karna hai?');
-    status('Mic dabao aur bolo'); return;
-  }
-  if (/(thank|thanks|shukriya|dhanyavad|dhanyawad)/.test(t)){
-    reply('🙏','Koi baat nahi', 'Aur kuch chahiye to bolo.');
-    say('Koi baat nahi. Aur kuch chahiye to bolo.');
-    status('Mic dabao aur bolo'); return;
-  }
-  if (/(tum kaun|kaun ho tum|tumhara naam|aap kaun)/.test(t)){
-    reply('🤖','Main Suno hoon', 'Aapke phone ka awaaz assistant. Browser, search, call, notes, timer, mausam aur market — sab kuch.');
-    say('Main Suno hoon, aapke phone ka assistant. Bolo kya karna hai.');
-    status('Mic dabao aur bolo'); return;
-  }
-
-  // ---- poore system ka poora gyan (system.json)
-  const full = await fullSelfAnswer(t);
-  if (full){
-    reply('📚', 'Seetal ka poora naksha', escapeHtml(full).replace(/\n/g,'<br>'));
-    say(full.replace(/\n/g,' ').slice(0, 500));
-    addHistory(text, 'Poora system bataya');
-    status('Mic dabao aur bolo');
-    return;
-  }
-
-  // ---- poore system ke bare me sawal
-  if (/(system|sab tool|saare tool|kya kya chal|kaun chal|haal batao|status)/.test(t)){
-    const a = await systemAnswer();
-    reply('🛰️', a.title, a.body);
-    say(a.speech);
-    addHistory(text, 'System ka haal');
-    status('Mic dabao aur bolo');
-    return;
-  }
-  // ---- kisi tool ko kholna
-  const toolKey = toolFromText(t);
-  if (toolKey && /(kholo|khol|open|chalao|jao|dikhao)/.test(t)){
-    const url = SELF.links[toolKey];
-    if (url){
-      openUrl(url);
-      reply('🧭', toolKey.toUpperCase(), 'Khol rahi hoon…');
-      say(toolKey + ' khol rahi hoon.');
-      addHistory(text, 'Khola: ' + toolKey);
-      status('Mic dabao aur bolo');
-      return;
-    }
-  }
-
-  // ---- khud ke bare me sawal (apna gyan)
-  const selfAns = selfAnswer(t);
-  if (selfAns){
-    reply('🤖', SELF.naam + ' ' + SELF.version, escapeHtml(selfAns).replace(/\n/g,'<br>'));
-    say(selfAns.replace(/\n/g,' ').slice(0, 400));
-    addHistory(text,'Apne bare me bataya');
-    status('Mic dabao aur bolo');
-    return;
-  }
-
-  // ---- AI se seedha jawab
-  if (!state._aiBusy){
+  // ---- unknown: pehle optional AI se samjhne ki koshish
+  if (state.aiProvider !== 'none' && state.aiKey && !state._aiBusy){
     state._aiBusy = true;
-    say('Ek second, soch rahi hoon.');
-    const ans = await aiChat(text);
+    reply('🤖','AI se samajh raha hoon…', escapeHtml(text));
+    const aiCmd = await aiInterpret(text);
+    const mapped = aiCmd ? mapAiCmd(aiCmd) : null;
     state._aiBusy = false;
-    if (ans){
-      reply('💬','Suno', escapeHtml(ans).replace(/\n/g,'<br>'));
-      say(ans.replace(/\n/g,' '));
-      addHistory(text,'AI: '+ans.slice(0,50));
-      status('Mic dabao aur bolo');
-      return;
-    }
-    // AI lagi hai par jawab nahi aaya - asli wajah dikhao
-    if (state._aiErr){
-      reply('⚠️','AI se baat nahi ho payi', 'Wajah: <b>'+escapeHtml(state._aiErr)+'</b><br>Settings me key aur model check karo, ya “AI test karo” dabao.');
-      say('AI se baat nahi ho payi. Settings me key check karo.');
-      status('Mic dabao aur bolo');
-      return;
-    }
+    if (mapped){ return handle(mapped); }
   }
 
-  // ---- unknown: khud Google par nahi bhejta, poochh kar bhejta hai
+  // ---- unknown
   const guess = findSite(t);
-  const q = text.replace(/^(suno|hey|please|zara)\s+/i,'').trim();
-  const gurl = 'https://www.google.com/search?q='+encodeURIComponent(q);
-  reply('🤔','Ye main abhi nahi samajh paya',
-    'Aapne kaha: “'+escapeHtml(text)+'”<br><br>'+
-    'AI se jawab nahi aaya. Internet check karo, ya Settings me “AI test karo” dabao (chaho to apni Gemini key bhi daal sakte ho).'+
-    (guess ? '<br><br>Shayad aap <b>'+guess.name+'</b> kholna chahte the — “'+guess.name+' kholo” boliye.' : '')+
-    '<br><br><a href="'+gurl+'" target="_blank" rel="noopener" style="color:var(--acc2)">Google par dhoondhna hai to yahan dabao</a>');
-  say('Ye main abhi nahi samajh paya. Settings me AI on kar do, phir main sab samajh jaunga.');
+  reply('🤔','Samajh nahi aaya', 'Aapne kaha: “'+escapeHtml(text)+'”<br>'+
+    (guess ? 'Shayad aap <b>'+guess.name+'</b> kholna chahte the — “'+guess.name+' kholo” boliye.<br>' : '')+
+    'Examples: “YouTube kholo”, “Google par news search karo”, “call karo 9876543210”, “mausam batao”, “note likho doodh lana hai”, “5 minute ka timer”.');
+  say('Samajh nahi aaya. Commands tab me list dekh lein.');
   addHistory(text,'Samajh nahi aaya');
   status('Mic dabao aur bolo');
 }
 
 /* ============ UI wiring ============ */
-let _lastReply = '';
-const _origSay = say;
-say = function(text, _retry){ _lastReply = text || _lastReply; return _origSay(text, _retry); };
-const _btnSpeak = $('btnSpeakNow');
-if (_btnSpeak) _btnSpeak.onclick = ()=>{
-  const t = _lastReply || $('replyText').textContent || '';
-  if (!t) { toast('Pehle kuch bolo'); return; }
-  const was = state.speak; state.speak = true;
-  say(t);
-  state.speak = was;
-};
-/* ================= camera (vision) ================= */
-let camStream = null;
-async function camStart(){
-  try{
-    if (camStream) return true;
-    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-    const v = $('camView');
-    if (v){ v.srcObject = camStream; }
-    $('camWrap').style.display = 'block';
-    return true;
-  }catch(e){
-    $('camWrap').style.display = 'none';
-    toast('Camera ki permission nahi mili');
-    return false;
-  }
-}
-function camStop(){
-  try{ if (camStream) camStream.getTracks().forEach(t => t.stop()); }catch(e){}
-  camStream = null;
-  $('camWrap').style.display = 'none';
-}
-
-async function camLook(){
-  if (!camStream){ const ok = await camStart(); if (!ok) return; }
-  const v = $('camView');
-  if (!v || !v.videoWidth){ reply('📷','Camera taiyaar nahi', 'Ek second ruk kar dobara dabao.'); say('Camera taiyaar nahi.'); return; }
-  const c = document.createElement('canvas');
-  c.width = 640; c.height = Math.round(640 * v.videoHeight / v.videoWidth);
-  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
-  const b64 = c.toDataURL('image/jpeg', 0.7).split(',')[1];
-
-  // Gemini key ho to vision chalta hai
-  if (state.aiProvider === 'gemini' && state.aiKey){
-    reply('👁️','Dekh rahi hoon…', '');
-    say('Ek second, dekhti hoon.');
-    try{
-      const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + (state.aiModel || 'gemini-2.0-flash') + ':generateContent?key=' + encodeURIComponent(state.aiKey);
-      const body = JSON.stringify({ contents: [{ parts: [
-        { text: 'Tum Suno ho — Swag ki Hinglish dost. Is photo me jo dikh raha hai, 2-3 line me Hinglish me batao. Agar koi insaan hai to uska mood/expression batao (khush, udaas, thaka, gussa). Chhota rakho, pyaar se.' },
-        { inline_data: { mime_type: 'image/jpeg', data: b64 } }
-      ] }] });
-      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
-      const j = await r.json();
-      if (j.error) throw new Error(j.error.message || 'vision fail');
-      const txt = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts[0].text;
-      if (!txt) throw new Error('khaali');
-      reply('👁️','Main dekhti hoon', escapeHtml(txt).replace(/\n/g,'<br>'));
-      say(txt);
-      return;
-    }catch(e){
-      reply('👁️','Dekh nahi payi', escapeHtml(String(e.message||e)).slice(0,120));
-      say('Dekh nahi payi. Settings me Gemini key check karo.');
-      return;
-    }
-  }
-
-  // key nahi hai — imandari se batao
-  reply('👁️','Dekhne ke liye key chahiye', 'Camera chal raha hai, par photo samajhne ke liye ek AI chahiye. Settings → Google Gemini → apni free key daal do, phir main tumhe dekh kar bata sakungi.');
-  say('Camera chal raha hai. Par dekhne ke liye Gemini key chahiye — Settings me daal do.');
-}
-$('camLook').onclick = camLook;
-
-/* ================= always-on listening ================= */
-state.always = LS.get('always', false);
-const alwaysBtn = $('alwaysBtn');
-function paintAlways(){
-  if (!alwaysBtn) return;
-  alwaysBtn.textContent = state.always ? '🔁 Always sun rahi hoon — ON (band karne ke liye dabao)' : '🔁 Always sunta rahe — BAND';
-  try{
-    const lab = $('micLabel'); const ic = $('micIcon');
-    if (lab) lab.textContent = state.always ? 'LIVE' : 'BOLO';
-    if (ic) ic.textContent = state.always ? '🔴' : '🎙️';
-  }catch(e){}
-  alwaysBtn.style.borderColor = state.always ? 'rgba(34,197,94,.6)' : '';
-  alwaysBtn.style.color = state.always ? '#22c55e' : '';
-  $('levelWrap').style.display = state.always ? 'block' : 'none';
-}
-alwaysBtn.onclick = async () => {
-  state.always = !state.always;
-  LS.set('always', state.always);
-  paintAlways();
-  if (state.always){
-    toast('Always-on chalu — sun rahi hoon, dekh bhi rahi hoon');
-    startAlways();
-    camStart();
-  } else {
-    stopAlways();
-    camStop();
-    toast('Always-on band — sunna aur dekhna dono band');
-  }
-};
-
-let alwaysRec = null, alwaysTimer = null, levelCtx = null, levelStream = null, levelRAF = null;
-
-async function startLevelMeter(){
-  try{
-    if (levelStream) return;
-    levelStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
-    levelCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const src = levelCtx.createMediaStreamSource(levelStream);
-    const an = levelCtx.createAnalyser();
-    an.fftSize = 512;
-    src.connect(an);
-    const buf = new Uint8Array(an.frequencyBinCount);
-    const loop = () => {
-      an.getByteFrequencyData(buf);
-      let sum = 0;
-      for (let i=0;i<buf.length;i++) sum += buf[i];
-      const avg = sum / buf.length;
-      const pct = Math.min(100, Math.round(avg * 2.2));
-      const bar = $('levelBar');
-      if (bar) bar.style.width = pct + '%';
-      const txt = $('levelTxt');
-      if (txt) txt.textContent = pct < 6 ? 'Awaaz nahi aa rahi — paas aao ya zor se bolo' : pct < 25 ? 'Halki awaaz — thoda zor se' : 'Achha sun rahi hoon';
-      levelRAF = requestAnimationFrame(loop);
-    };
-    loop();
-  }catch(e){}
-}
-function stopLevelMeter(){
-  try{ if (levelRAF) cancelAnimationFrame(levelRAF); }catch(e){}
-  try{ if (levelStream) levelStream.getTracks().forEach(t=>t.stop()); }catch(e){}
-  levelStream = null; levelCtx = null;
-}
-
-function startAlways(){
-  if (!SR) { toast('Is browser me voice nahi'); return; }
-  try{ window.speechSynthesis.cancel(); }catch(e){}
-  try{ if (rec && state.listening){ rec.stop(); } }catch(e){}
-  startLevelMeter();
-  const run = () => {
-    if (!state.always) return;
-    if (state.speaking){ clearTimeout(alwaysTimer); alwaysTimer = setTimeout(run, 800); return; }
-    try{ if (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending)){ clearTimeout(alwaysTimer); alwaysTimer = setTimeout(run, 800); return; } }catch(e){}
-    try{
-      alwaysRec = new SR();
-      alwaysRec.lang = state.lang;
-      alwaysRec.continuous = true;
-      alwaysRec.interimResults = true;
-      alwaysRec.maxAlternatives = 5;   // dur se bola ho to best match chun sake
-      alwaysRec.onresult = (ev) => {
-        if (state.speaking) return;              // bol rahi hoon — apni awaaz ignore
-        let finalTxt = '', interim = '';
-        for (let i = ev.resultIndex; i < ev.results.length; i++){
-          const r = ev.results[i];
-          if (r.isFinal) finalTxt += r[0].transcript + ' ';
-          else interim += r[0].transcript;
-        }
-        if (interim){
-          $('transcript').innerHTML = '<span style="color:#22d3ee">' + escapeHtml(interim) + '</span>';
-          status('Sun rahi hoon…', 'live');
-        }
-        if (finalTxt.trim()){
-          let said = finalTxt.trim();
-          // apne hi bole hue shabd wapas aaye? ignore
-          try{
-            const last = String(state._lastSpoken || '').toLowerCase().replace(/\s+/g,' ');
-            const norm = said.toLowerCase().replace(/\s+/g,' ');
-            if (last && norm.length > 6 && last.includes(norm.slice(0, Math.min(24, norm.length)))) return;
-          }catch(e){}
-          const wcount = said.split(/\s+/).filter(Boolean).length;
-          const hasCmd = /(market|nifty|kholo|khol|batao|mausam|time|samay|note|timer|alarm|system|trader|builder|doctor|gyan|vault|call|whatsapp|sms|search|dhoondo|band|chalu|haan|nahi|kaun|kya|kaise|suno|bolo|mera|tum|aap)/i.test(said);
-          if (wcount < 2 && !hasCmd){ return; }   // shor ya adhoora — chhod do
-          try{
-            const res = ev.results[ev.results.length - 1];
-            if (res && res.length > 1){
-              const alts = [];
-              for (let k = 0; k < res.length; k++) alts.push(res[k].transcript || '');
-              const best = alts.find(a => /(market|nifty|kholo|batao|mausam|time|note|timer|system|trader|builder|doctor|gyan)/i.test(a));
-              if (best) said = best.trim();
-            }
-          }catch(e){}
-          $('transcript').textContent = said;
-          // bol rahi ho to sunna rok do, jawab do, phir wapas sunna
-          try{ window.speechSynthesis.cancel(); }catch(e){}
-          handle(said);
-        }
-      };
-      alwaysRec.onerror = (e) => {
-        if (e && (e.error === 'not-allowed' || e.error === 'service-not-allowed')){ state.always = false; LS.set('always', false); paintAlways(); stopAlways(); toast('Mic ki permission nahi mili'); }
-      };
-      alwaysRec.onend = () => {
-        if (state.always){ clearTimeout(alwaysTimer); alwaysTimer = setTimeout(run, 250); }
-      };
-      alwaysRec.start();
-      status('Always sun rahi hoon — dur se bhi bolo, dheere-dheere saaf');
-    }catch(e){
-      clearTimeout(alwaysTimer);
-      alwaysTimer = setTimeout(run, 1200);
-    }
-  };
-  run();
-}
-function stopAlways(){
-  clearTimeout(alwaysTimer);
-  try{ if (alwaysRec) alwaysRec.stop(); }catch(e){}
-  alwaysRec = null;
-  stopLevelMeter();
-}
-
-/* mic = LIVE conversation mode (jaise ChatGPT/Gemini voice) */
-function toggleLive(){
-  state.always = !state.always;
-  LS.set('always', state.always);
-  paintAlways();
-  if (state.always){
-    toast('LIVE chalu — bolo, main sunti rahungi');
-    startAlways();
-    camStart();
-  } else {
-    stopAlways();
-    camStop();
-    toast('LIVE band');
-  }
-}
-$('mic').onclick = toggleLive;
-let _lpTimer = null, _lpFired = false;
-$('mic').addEventListener('pointerdown', () => {
-  _lpFired = false;
-  _lpTimer = setTimeout(() => { _lpFired = true; if (!state.always) toggleLive(); }, 450);
-});
-$('mic').addEventListener('pointerup', () => { clearTimeout(_lpTimer); });
-$('mic').addEventListener('pointerleave', () => { clearTimeout(_lpTimer); });
+$('mic').onclick = ()=>startListening();
 $('typeGo').onclick = ()=>{
   const v = $('typeIn').value.trim();
   if (!v) return;
@@ -1689,198 +1150,6 @@ function docShowErrors(){
   const b = $('errClear'); if (b) b.onclick = ()=>{ try{ localStorage.removeItem('suno_errors'); }catch(e){} toast('Log saaf'); };
 }
 
-/* ================= khud ka gyan (self-knowledge) ================= */
-const SELF = {
-  naam: 'Suno',
-  version: 'v4',
-  kisne: 'Swag (bhupendarsingh785) ke liye Seetal ne banaya — ek AI dost',
-  files: [
-    'index.html — poora app (UI, awaaz, commands, market, settings)',
-    'sw.js — offline cache (net band ho to bhi khule)',
-    'manifest.webmanifest — phone me app ki tarah install hone ke liye',
-    'portal.html — mirror links jaanch kar koi ek chalu karta hai'
-  ],
-  kaam: [
-    'awaaz se sunna (mic) aur bol kar jawab dena',
-    'browser/site kholna, Google aur YouTube par search',
-    'call dial karna, WhatsApp aur SMS draft bhejna',
-    'maps me rasta dikhana',
-    'mausam batana (Open-Meteo se)',
-    'notes rakhna aur dikhana',
-    'timer aur in-app alarm',
-    'market: Nifty, Sensex, Reliance jaisa live data Seetal Trader se lana',
-    'pichhle kaam ki history',
-    'Doctor — apni jaanch aur error log',
-    'Settings — bhasha, awaaz, AI, mirror links, backup'
-  ],
-  data: 'Sab kuch phone ke andar (localStorage) rehta hai — notes, contacts, history, settings. Koi server nahi, koi account nahi.',
-  dimaag: 'Commands ke liye rules, aur samajhne ke liye AI — pehle free dimaag (bina key), chaho to apni Google Gemini ya OpenAI key.',
-  limit: [
-    'WiFi/Bluetooth on-off nahi kar sakta',
-    'doosre apps khud nahi khol sakta (sirf browser link)',
-    'bina tap call nahi laga sakta',
-    'background me hamesha nahi sunta (screen on rakhna padta hai)',
-    'system alarm nahi, apna in-app alarm hai'
-  ],
-  links: {
-    trader: 'https://bhupendarsingh785.github.io/seetal-trader/',
-    hub: 'https://bhupendarsingh785.github.io/seetal-trader/hub.html',
-    builder: 'https://bhupendarsingh785.github.io/seetal-trader/builder.html',
-    doctor: 'https://bhupendarsingh785.github.io/seetal-trader/doctor.html',
-    gyan: 'https://bhupendarsingh785.github.io/seetal-trader/gyan.html',
-    map: 'https://bhupendarsingh785.github.io/seetal-trader/status.html',
-    vault: 'https://bhupendarsingh785.github.io/seetal-trader/vault.html',
-    backup: 'https://seetal-trader.netlify.app/',
-    vercel: 'https://bhupendarsingh785.vercel.app/'
-  },
-  tools: [
-    'Trader — market live data, entry-stop-target, hisab',
-    'Builder — bol ke naya app banao',
-    'Doctor — system ki jaanch aur ilaaj',
-    'Gyan — sehat, robot, padhai, paisa, zindagi',
-    'Vault — password tijori',
-    'Map — kaun platform zinda hai',
-    'Hub — sab kuch ek darwaze se'
-  ]
-};
-
-function selfAnswer(t){
-  const has = (re) => re.test(t);
-  if (has(/kitni file|kaunsi file|files kya|code kya|andar kya hai|kya kya code/)){
-    return 'Mere andar ' + SELF.files.length + ' file hain:\n• ' + SELF.files.join('\n• ');
-  }
-  if (has(/kya kar sakti|kya kar sakta|features|kaam kya|kya kya kar/)){
-    return 'Main ye sab kar sakti hoon:\n• ' + SELF.kaam.join('\n• ');
-  }
-  if (has(/kaise chalti|kaise chalta|kaise kaam|how do you work/)){
-    return SELF.naam + ' ' + SELF.version + ' — ' + SELF.dimaag + ' ' + SELF.data;
-  }
-  if (has(/limit|nahi kar sakti|nahi kar sakta|kya nahi/)){
-    return 'Ye main nahi kar sakti:\n• ' + SELF.limit.join('\n• ');
-  }
-  if (has(/kaun banaya|kisne banaya|tumhara malik|owner|kiska app/)){
-    return 'Mujhe ' + SELF.kisne + ' ne banaya hai.';
-  }
-  if (has(/tum kaun|kaun ho tum|tumhara naam|apne bare me|khud ke bare/)){
-    return 'Main ' + SELF.naam + ' hoon (' + SELF.version + ') — ' + SELF.kisne + ' ne banaya. ' + SELF.dimaag;
-  }
-  if (has(/data kahan|mera data|privacy|kahan save/)){
-    return SELF.data;
-  }
-  return null;
-}
-
-
-/* ---- poore system ka poora gyan (system.json se) ---- */
-let SYSTEM = null;
-async function loadSystem(){
-  if (SYSTEM) return SYSTEM;
-  const urls = [
-    'https://raw.githubusercontent.com/bhupendarsingh785/seetal-trader/main/system.json',
-    'https://cdn.jsdelivr.net/gh/bhupendarsingh785/seetal-trader@main/system.json',
-    'https://bhupendarsingh785.github.io/seetal-trader/system.json'
-  ];
-  for (const u of urls){
-    try{
-      const r = await fetch(u + '?t=' + Date.now(), { cache:'no-store' });
-      if (!r.ok) continue;
-      SYSTEM = await r.json();
-      if (SYSTEM && SYSTEM.pages) return SYSTEM;
-    }catch(e){}
-  }
-  return null;
-}
-
-async function fullSelfAnswer(t){
-  const S = await loadSystem();
-  if (!S) return null;
-  const has = (re) => re.test(t);
-
-  if (has(/kitne page|kitne hisse|saare page|poora structure|structure kya/)){
-    return 'Poore system me ' + S.pages.length + ' hisse hain:\n• ' + S.pages.map(p => p.name + ' (' + p.file + ') — ' + p.desc).join('\n• ');
-  }
-  if (has(/kya kya data|data kahan se|kitne raste|source/)){
-    return 'Data ' + S.data_routes.length + ' raste se aata hai:\n• ' + S.data_routes.map(d => d.name).join('\n• ')
-      + '\n\nProviders — bars: ' + S.providers.bars.join(', ') + '. Quotes: ' + S.providers.quotes.join(', ') + '.';
-  }
-  if (has(/kya kya key|secret|chahiye kya/)){
-    return 'Jo keys chahiye:\n• ' + Object.entries(S.secrets_needed).map(([k,v]) => k + ' — ' + v).join('\n• ');
-  }
-  if (has(/limit|nahi kar sakti|kamzori|weak|dikkat kahan/)){
-    return 'Kamzoriyan (sach):\n• ' + S.weak_points.map(w => w.area + ' — ' + w.status + ' (' + w.why + ')').join('\n• ')
-      + '\n\nSeemaayein:\n• ' + S.known_limits.join('\n• ');
-  }
-  if (has(/advance kaise|aage kya|sudhaar|behtar kaise/)){
-    return 'Aage ye karna hai:\n• ' + S.how_to_advance.join('\n• ');
-  }
-  if (has(/kahan hai|link|site|repos/)){
-    return 'Live sites:\n• ' + S.live_sites.join('\n• ') + '\n\nRepos:\n• GitHub: ' + S.repos.github + '\n• GitLab: ' + S.repos.gitlab_mirror + '\n• Suno: ' + S.repos.suno;
-  }
-  return null;
-}
-
-
-/* ---- poore system ka haal ---- */
-const SYS_LINKS = [
-  ['Trader', 'https://bhupendarsingh785.github.io/seetal-trader/'],
-  ['Builder', 'https://bhupendarsingh785.github.io/seetal-trader/builder.html'],
-  ['Doctor', 'https://bhupendarsingh785.github.io/seetal-trader/doctor.html'],
-  ['Gyan', 'https://bhupendarsingh785.github.io/seetal-trader/gyan.html'],
-  ['Map', 'https://bhupendarsingh785.github.io/seetal-trader/status.html'],
-  ['Hub', 'https://bhupendarsingh785.github.io/seetal-trader/hub.html']
-];
-
-async function pingOne(url){
-  try{
-    const ctl = new AbortController();
-    const to = setTimeout(()=>ctl.abort(), 8000);
-    const r = await fetch(url + (url.includes('?')?'&':'?') + 't=' + Date.now(), { cache:'no-store', signal: ctl.signal });
-    clearTimeout(to);
-    return r.ok;
-  }catch(e){ return false; }
-}
-
-async function systemAnswer(){
-  const res = await Promise.all(SYS_LINKS.map(async ([n,u]) => [n, await pingOne(u)]));
-  const ok = res.filter(x => x[1]).length;
-  const dead = res.filter(x => !x[1]).map(x => x[0]);
-  let market = '';
-  try{
-    const d = await marketData();
-    if (d){
-      const n = d.rows.find(r => r.symbol === '^NSEI');
-      const b = d.rows.find(r => r.symbol === '^NSEBANK');
-      const bits = [];
-      if (n) bits.push('Nifty ' + marketNum(n.last) + (n.change_pct>=0?' upar ':' neeche ') + marketNum(Math.abs(n.change_pct)) + ' percent');
-      if (b) bits.push('Bank Nifty ' + marketNum(b.last));
-      market = bits.join(', ');
-    }
-  }catch(e){}
-  const speech = `${ok} tool chal rahe hain, ${res.length} mein se.`
-    + (dead.length ? ` Nahi chal rahe: ${dead.join(', ')}.` : ' Sab theek hain.')
-    + (market ? ' ' + market + '.' : '');
-  return {
-    title: 'System ka haal',
-    body: res.map(x => (x[1] ? '✅ ' : '❌ ') + x[0]).join(' · ') + (market ? '<br>' + market : ''),
-    speech
-  };
-}
-
-function toolFromText(t){
-  const map = [
-    [/trader|trading|market app|chart/, 'trader'],
-    [/builder|app banao|app banane/, 'builder'],
-    [/doctor|jaanch|daktar/, 'doctor'],
-    [/gyan|sehat|padhai|robot/, 'gyan'],
-    [/map|status|kaun zinda/, 'map'],
-    [/vault|password|tijori/, 'vault'],
-    [/hub|darwaza|home/, 'hub']
-  ];
-  for (const [re, k] of map) if (re.test(t)) return k;
-  return null;
-}
-
-
 /* ================= optional AI samajhne wala ================= */
 function mapAiCmd(cmd){
   const c = String(cmd||'').trim();
@@ -1928,45 +1197,6 @@ async function aiInterpret(text){
   }catch(e){ return null; }
 }
 
-async function aiChat(text){
-  const prompt = 'Tum "Suno" ho — Swag ke phone ke andar rehne wali Hinglish assistant. '
-    + 'Roman Hindi me, 2-3 chhoti line me, seedha aur pyaar se jawab do. Lecture mat do. '
-    + 'Agar sawal market/shares ka ho to bolo ki "market kaisa hai" ya "Reliance kaisa hai" bolne se live data mil jayega. '
-    + 'Agar kuch karna ho (kholna, search, call, note, timer) to saaf bata do kaise bolein. '
-    + 'Tumhara app "Suno v4" hai: mic se sunta hai, browser/search/call/whatsapp/sms/maps, mausam, notes, timer, '
-    + 'market live data (Seetal Trader se), history, Doctor, Settings. Data phone me hi rehta hai. '
-    + 'WiFi/BT on-off, dusre apps kholna, bina tap call — ye nahi kar sakta. '
-    + 'User ne kaha: "' + text + '"' + (state._mood === 'sad' ? ' (User udaas lag raha hai — pehle feeling ko naam do, phir baat karo. Lecture mat do.)' : '') + '';
-  try{
-    // koi key nahi? to free (bina key) dimaag use karo
-    if (!state.aiKey || state.aiProvider === 'none'){
-      const r0 = await fetch('https://text.pollinations.ai/' + encodeURIComponent(prompt));
-      if (!r0.ok){ state._aiErr = 'free AI: http ' + r0.status; return null; }
-      const t0 = (await r0.text() || '').trim();
-      state._aiErr = t0 ? '' : 'free AI khaali';
-      return t0 || null;
-    }
-    let url, headers, body;
-    if (state.aiProvider === 'openai'){
-      url = 'https://api.openai.com/v1/chat/completions';
-      headers = { 'Content-Type':'application/json', 'Authorization':'Bearer ' + state.aiKey };
-      body = JSON.stringify({ model: state.aiModel || 'gpt-4o-mini', temperature:0.4, messages:[{ role:'user', content: prompt }] });
-    } else {
-      url = 'https://generativelanguage.googleapis.com/v1beta/models/' + (state.aiModel || 'gemini-2.0-flash') + ':generateContent?key=' + encodeURIComponent(state.aiKey);
-      headers = { 'Content-Type':'application/json' };
-      body = JSON.stringify({ contents:[{ parts:[{ text: prompt }] }] });
-    }
-    const r = await fetch(url, { method:'POST', headers, body });
-    const j = await r.json();
-    if (j && j.error){ state._aiErr = (j.error.message || JSON.stringify(j.error)).slice(0,180); return null; }
-    const txt = state.aiProvider === 'openai'
-      ? (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content)
-      : (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts[0].text);
-    state._aiErr = txt ? '' : 'AI ne khaali jawab diya';
-    return (txt || '').trim() || null;
-  }catch(e){ state._aiErr = String(e && e.message || e).slice(0,180); return null; }
-}
-
 paintToggles();
 $('setSpeak').onclick = ()=>{ state.speak = !state.speak; LS.set('speak', state.speak); paintToggles(); };
 $('setAuto').onclick = ()=>{ state.auto = !state.auto; LS.set('auto', state.auto); paintToggles(); };
@@ -1996,93 +1226,6 @@ $('btnImport').onclick = importSettings;
 $('btnPickContact').onclick = pickContact;
 $('setMirrors').value = state.mirrors.join('\n');
 $('setAiProv').value = state.aiProvider;
-/* voice list bharo */
-function fillVoices(){
-  const sel = $('setVoice');
-  if (!sel) return;
-  if (!voices.length) loadVoices();
-  const list = voices.slice().sort((a,b)=>{
-    const ha = /^hi/i.test(a.lang||"") ? 0 : 1, hb = /^hi/i.test(b.lang||"") ? 0 : 1;
-    return ha - hb;
-  });
-  sel.innerHTML = '<option value="">(apne aap — sabse achhi Hindi awaaz)</option>' +
-    list.map(v => `<option value="${escapeHtml(v.name)}">${escapeHtml(v.name)} — ${escapeHtml(v.lang||"")}</option>`).join("");
-  sel.value = state.voiceName || "";
-  sel.onchange = () => {
-    state.voiceName = sel.value;
-    LS.set('voiceName', state.voiceName);
-    const was = state.speak; state.speak = true;
-    say('Namaste, ye meri awaaz hai.');
-    state.speak = was;
-  };
-}
-setTimeout(fillVoices, 600);
-if ('speechSynthesis' in window) window.speechSynthesis.onvoiceschanged = () => { loadVoices(); fillVoices(); };
-
-/* poora self test */
-const _stBtn = $('btnSelfTest');
-if (_stBtn) _stBtn.onclick = async () => {
-  const out = $('selfTestOut');
-  const rows = [];
-  const add = (n, ok, note) => rows.push((ok ? '✅ ' : '❌ ') + n + (note ? ' — ' + note : ''));
-  out.innerHTML = 'Test chal raha hai…';
-
-  add('Voice input (sunna)', !!SR, SR ? 'Chrome me chalta hai' : 'is browser me nahi');
-  add('Voice output (bolna)', 'speechSynthesis' in window, '');
-  try{ if (!voices.length) loadVoices(); }catch(e){}
-  add('Awaaz list', voices.length > 0, voices.length + ' awaaz mile');
-  const hi = (voices || []).filter(v => /^hi/i.test(v.lang||'')).length;
-  add('Hindi awaaz', hi > 0, hi ? hi + ' Hindi voice' : 'nahi mili — phone me Hindi TTS add karo');
-
-  // mic permission
-  try{
-    const st = await navigator.mediaDevices.getUserMedia({ audio: true });
-    st.getTracks().forEach(t=>t.stop());
-    add('Mic permission', true, 'mil gayi');
-  }catch(e){ add('Mic permission', false, 'mana kar diya'); }
-
-  // camera
-  try{
-    const cs = await navigator.mediaDevices.getUserMedia({ video: true });
-    cs.getTracks().forEach(t=>t.stop());
-    add('Camera permission', true, 'mil gayi');
-  }catch(e){ add('Camera permission', false, 'mana kar diya'); }
-
-  // AI
-  try{
-    const r = await fetch('https://text.pollinations.ai/' + encodeURIComponent('Sirf ek shabd: theek'));
-    const t = (await r.text() || '').trim();
-    add('AI ka jawab', t.length > 2, t.slice(0,30));
-  }catch(e){ add('AI ka jawab', false, String(e.message||e).slice(0,40)); }
-
-  add('Gemini key (vision ke liye)', !!(state.aiKey && state.aiProvider === 'gemini'), state.aiKey ? 'lagi hai' : 'nahi lagi');
-
-  out.innerHTML = rows.join('<br>');
-};
-
-const _vBtn = $('btnVoiceTest');
-if (_vBtn) _vBtn.onclick = ()=>{
-  const out = $('voiceTestOut');
-  let n = 0;
-  try{ n = (window.speechSynthesis.getVoices()||[]).length; }catch(e){}
-  const was = state.speak; state.speak = true;
-  say('Namaste, main Suno hoon. Awaaz chal rahi hai.');
-  state.speak = was;
-  out.textContent = n ? ('Phone me ' + n + ' awaaz mili — sunai de to sab theek hai.') : 'Phone me koi awaaz nahi mili. Chrome → Settings → Accessibility → Text-to-speech check karo.';
-};
-const _aiTestBtn = $('btnAiTest');
-if (_aiTestBtn) _aiTestBtn.onclick = async ()=>{
-  state.aiKey = ($('setAiKey').value || '').trim();
-  state.aiProvider = $('setAiProv').value;
-  state.aiModel = ($('setAiModel').value || '').trim();
-  LS.set('aiKey', state.aiKey); LS.set('aiProvider', state.aiProvider); LS.set('aiModel', state.aiModel);
-  const out = $('aiTestOut');
-  if (!state.aiKey || state.aiProvider === 'none'){ out.textContent = 'Pehle provider chuno aur key daalo.'; return; }
-  out.textContent = 'Test kar raha hoon…';
-  state._aiErr = '';
-  const ans = await aiChat('tum kaun ho');
-  out.textContent = ans ? ('✅ Chal gaya: ' + ans.slice(0,80)) : ('❌ ' + (state._aiErr || 'jawab nahi aaya'));
-};
 $('setAiKey').value = state.aiKey;
 $('setAiModel').value = state.aiModel;
 $('setRate').oninput = ()=>{ $('rateVal').textContent = $('setRate').value; };
@@ -2106,19 +1249,6 @@ $('setSave').onclick = ()=>{
 };
 
 /* service worker: offline shell */
-/* watchdog — agar TTS ka onend kabhi na aaye to mic hamesha band na rahe */
-setInterval(() => {
-  try{
-    if (state.speaking){
-      const sp = window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending);
-      if (!sp) state.speaking = false;
-    }
-  }catch(e){ state.speaking = false; }
-}, 1500);
-
-paintAlways();
-if (state.always) setTimeout(()=>{ try{ startAlways(); }catch(e){} }, 1200);
-
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
