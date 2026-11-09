@@ -304,6 +304,8 @@
       <input id="setAiModel" placeholder="model (optional, e.g. gemini-2.0-flash)" style="margin-top:8px" autocomplete="off" />
       <button class="btn ghost" id="btnAiTest" style="margin-top:8px">AI test karo</button>
       <button class="btn ghost" id="btnVoiceTest" style="margin-top:8px">🔊 Awaaz test karo</button>
+      <select id="setVoice" style="margin-top:8px"></select>
+      <div class="note" style="margin-top:4px">Awaaz chuno — jo sabse saaf lage wahi rakho.</div>
       <div id="voiceTestOut" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
       <div id="aiTestOut" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
     </div>
@@ -367,6 +369,7 @@ const state = {
   aiProvider: LS.get('aiProvider', 'none'),
   aiKey: LS.get('aiKey', ''),
   aiModel: LS.get('aiModel', ''),
+  voiceName: LS.get('voiceName', ''),
   listening: false,
   timer: null
 };
@@ -398,18 +401,77 @@ if ('speechSynthesis' in window){
   loadVoices();
   window.speechSynthesis.onvoiceschanged = loadVoices;
 }
+function pickVoice(){
+  try{
+    if (!voices.length) loadVoices();
+    const want = (state.voiceName || "").trim();
+    if (want){
+      const exact = voices.find(v => v.name === want);
+      if (exact) return exact;
+    }
+    const base = (state.lang || "hi-IN").split("-")[0];
+    // Hindi voice ko sabse pehle tarjeeh
+    const hindi = voices.filter(v => (v.lang || "").toLowerCase().startsWith("hi"));
+    if (hindi.length){
+      // Google/India wali voice pehle
+      const g = hindi.find(v => /google|india/i.test(v.name)) || hindi[0];
+      return g;
+    }
+    const same = voices.find(v => (v.lang || "").toLowerCase() === (state.lang || "").toLowerCase());
+    if (same) return same;
+    const anyBase = voices.find(v => (v.lang || "").toLowerCase().split("-")[0] === base);
+    if (anyBase) return anyBase;
+    const en = voices.find(v => (v.lang || "").toLowerCase().startsWith("en"));
+    return en || voices[0] || null;
+  }catch(e){ return null; }
+}
+
+function chunks(text, size){
+  const out = [];
+  let t = String(text || "").replace(/\s+/g, " ").trim();
+  while (t.length > size){
+    let cut = t.lastIndexOf(". ", size);
+    if (cut < size * 0.5) cut = t.lastIndexOf(" ", size);
+    if (cut < size * 0.5) cut = size;
+    out.push(t.slice(0, cut + 1).trim());
+    t = t.slice(cut + 1).trim();
+  }
+  if (t) out.push(t);
+  return out;
+}
+
 function say(text, _retry){
   if (!state.speak || !('speechSynthesis' in window) || !text) return;
   try{
     if (!voices.length) loadVoices();
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = state.lang; u.rate = Number(state.rate) || 1; u.pitch = 1;
-    const base = state.lang.split('-')[0];
-    const v = voices.find(v=>v.lang===state.lang) || voices.find(v=>v.lang && v.lang.split('-')[0]===base) || voices[0];
-    if (v) u.voice = v;
-    window.speechSynthesis.speak(u);
-    // Android Chrome kabhi pehli baar chup rehta hai - ek baar dobara try
+    const parts = chunks(text, 170);
+    if (!parts.length) return;
+
+    // pehle se bol raha hai to queue me jodo (kaat kar naya shuru mat karo)
+    const busy = window.speechSynthesis.speaking || window.speechSynthesis.pending;
+    if (!busy) window.speechSynthesis.cancel();
+
+    const v = pickVoice();
+    parts.forEach((part, i) => {
+      const u = new SpeechSynthesisUtterance(part);
+      u.lang = (v && v.lang) || state.lang || "hi-IN";
+      u.rate = Number(state.rate) || 1;
+      u.pitch = 1;
+      if (v) u.voice = v;
+      if (i === parts.length - 1){
+        u.onend = () => {
+          // auto mode: jawab ke baad phir sunna shuru karo
+          try{
+            if (state.auto && !state.listening && typeof startListening === "function"){
+              setTimeout(() => { try{ startListening(); }catch(e){} }, 450);
+            }
+          }catch(e){}
+        };
+      }
+      window.speechSynthesis.speak(u);
+    });
+
+    // Android Chrome kabhi pehli baar chup rehta hai
     if (!_retry){
       setTimeout(()=>{
         try{
@@ -1509,6 +1571,29 @@ $('btnImport').onclick = importSettings;
 $('btnPickContact').onclick = pickContact;
 $('setMirrors').value = state.mirrors.join('\n');
 $('setAiProv').value = state.aiProvider;
+/* voice list bharo */
+function fillVoices(){
+  const sel = $('setVoice');
+  if (!sel) return;
+  if (!voices.length) loadVoices();
+  const list = voices.slice().sort((a,b)=>{
+    const ha = /^hi/i.test(a.lang||"") ? 0 : 1, hb = /^hi/i.test(b.lang||"") ? 0 : 1;
+    return ha - hb;
+  });
+  sel.innerHTML = '<option value="">(apne aap — sabse achhi Hindi awaaz)</option>' +
+    list.map(v => `<option value="${escapeHtml(v.name)}">${escapeHtml(v.name)} — ${escapeHtml(v.lang||"")}</option>`).join("");
+  sel.value = state.voiceName || "";
+  sel.onchange = () => {
+    state.voiceName = sel.value;
+    LS.set('voiceName', state.voiceName);
+    const was = state.speak; state.speak = true;
+    say('Namaste, ye meri awaaz hai.');
+    state.speak = was;
+  };
+}
+setTimeout(fillVoices, 600);
+if ('speechSynthesis' in window) window.speechSynthesis.onvoiceschanged = () => { loadVoices(); fillVoices(); };
+
 const _vBtn = $('btnVoiceTest');
 if (_vBtn) _vBtn.onclick = ()=>{
   const out = $('voiceTestOut');
