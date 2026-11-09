@@ -1017,7 +1017,7 @@ async function handle(raw, _depth){
   }
 
   // ---- AI se seedha jawab (agar key lagi hai) - sabse pehle yahi try hota hai
-  if (state.aiKey && state.aiProvider !== 'none' && !state._aiBusy){
+  if (!state._aiBusy){
     state._aiBusy = true;
     const ans = await aiChat(text);
     state._aiBusy = false;
@@ -1043,9 +1043,7 @@ async function handle(raw, _depth){
   const gurl = 'https://www.google.com/search?q='+encodeURIComponent(q);
   reply('🤔','Ye main abhi nahi samajh paya',
     'Aapne kaha: “'+escapeHtml(text)+'”<br><br>'+
-    (state.aiKey && state.aiProvider !== 'none'
-      ? 'AI se jawab nahi aaya — Settings me “AI test karo” dabao.'
-      : 'Poori samajh ke liye Settings me <b>AI key</b> daal do (free hai) — phir main har baat samajh jaunga.')+
+    'AI se jawab nahi aaya. Internet check karo, ya Settings me “AI test karo” dabao (chaho to apni Gemini key bhi daal sakte ho).'+
     (guess ? '<br><br>Shayad aap <b>'+guess.name+'</b> kholna chahte the — “'+guess.name+' kholo” boliye.' : '')+
     '<br><br><a href="'+gurl+'" target="_blank" rel="noopener" style="color:var(--acc2)">Google par dhoondhna hai to yahan dabao</a>');
   say('Ye main abhi nahi samajh paya. Settings me AI on kar do, phir main sab samajh jaunga.');
@@ -1340,13 +1338,20 @@ async function aiInterpret(text){
 }
 
 async function aiChat(text){
-  if (!state.aiKey || state.aiProvider === 'none') return null;
   const prompt = 'Tum "Suno" ho — Swag ke phone ke andar rehne wali Hinglish assistant. '
     + 'Roman Hindi me, 2-3 chhoti line me, seedha aur pyaar se jawab do. Lecture mat do. '
     + 'Agar sawal market/shares ka ho to bolo ki "market kaisa hai" ya "Reliance kaisa hai" bolne se live data mil jayega. '
     + 'Agar kuch karna ho (kholna, search, call, note, timer) to saaf bata do kaise bolein. '
     + 'User ne kaha: "' + text + '"';
   try{
+    // koi key nahi? to free (bina key) dimaag use karo
+    if (!state.aiKey || state.aiProvider === 'none'){
+      const r0 = await fetch('https://text.pollinations.ai/' + encodeURIComponent(prompt));
+      if (!r0.ok){ state._aiErr = 'free AI: http ' + r0.status; return null; }
+      const t0 = (await r0.text() || '').trim();
+      state._aiErr = t0 ? '' : 'free AI khaali';
+      return t0 || null;
+    }
     let url, headers, body;
     if (state.aiProvider === 'openai'){
       url = 'https://api.openai.com/v1/chat/completions';
