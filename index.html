@@ -1093,6 +1093,29 @@ async function handle(raw, _depth){
     status('Mic dabao aur bolo'); return;
   }
 
+  // ---- poore system ke bare me sawal
+  if (/(system|sab tool|saare tool|kya kya chal|kaun chal|haal batao|status)/.test(t)){
+    const a = await systemAnswer();
+    reply('🛰️', a.title, a.body);
+    say(a.speech);
+    addHistory(text, 'System ka haal');
+    status('Mic dabao aur bolo');
+    return;
+  }
+  // ---- kisi tool ko kholna
+  const toolKey = toolFromText(t);
+  if (toolKey && /(kholo|khol|open|chalao|jao|dikhao)/.test(t)){
+    const url = SELF.links[toolKey];
+    if (url){
+      openUrl(url);
+      reply('🧭', toolKey.toUpperCase(), 'Khol rahi hoon…');
+      say(toolKey + ' khol rahi hoon.');
+      addHistory(text, 'Khola: ' + toolKey);
+      status('Mic dabao aur bolo');
+      return;
+    }
+  }
+
   // ---- khud ke bare me sawal (apna gyan)
   const selfAns = selfAnswer(t);
   if (selfAns){
@@ -1424,9 +1447,24 @@ const SELF = {
   ],
   links: {
     trader: 'https://bhupendarsingh785.github.io/seetal-trader/',
+    hub: 'https://bhupendarsingh785.github.io/seetal-trader/hub.html',
+    builder: 'https://bhupendarsingh785.github.io/seetal-trader/builder.html',
+    doctor: 'https://bhupendarsingh785.github.io/seetal-trader/doctor.html',
+    gyan: 'https://bhupendarsingh785.github.io/seetal-trader/gyan.html',
+    map: 'https://bhupendarsingh785.github.io/seetal-trader/status.html',
     vault: 'https://bhupendarsingh785.github.io/seetal-trader/vault.html',
-    backup: 'https://seetal-trader.netlify.app/'
-  }
+    backup: 'https://seetal-trader.netlify.app/',
+    vercel: 'https://bhupendarsingh785.vercel.app/'
+  },
+  tools: [
+    'Trader — market live data, entry-stop-target, hisab',
+    'Builder — bol ke naya app banao',
+    'Doctor — system ki jaanch aur ilaaj',
+    'Gyan — sehat, robot, padhai, paisa, zindagi',
+    'Vault — password tijori',
+    'Map — kaun platform zinda hai',
+    'Hub — sab kuch ek darwaze se'
+  ]
 };
 
 function selfAnswer(t){
@@ -1452,6 +1490,67 @@ function selfAnswer(t){
   if (has(/data kahan|mera data|privacy|kahan save/)){
     return SELF.data;
   }
+  return null;
+}
+
+
+/* ---- poore system ka haal ---- */
+const SYS_LINKS = [
+  ['Trader', 'https://bhupendarsingh785.github.io/seetal-trader/'],
+  ['Builder', 'https://bhupendarsingh785.github.io/seetal-trader/builder.html'],
+  ['Doctor', 'https://bhupendarsingh785.github.io/seetal-trader/doctor.html'],
+  ['Gyan', 'https://bhupendarsingh785.github.io/seetal-trader/gyan.html'],
+  ['Map', 'https://bhupendarsingh785.github.io/seetal-trader/status.html'],
+  ['Hub', 'https://bhupendarsingh785.github.io/seetal-trader/hub.html']
+];
+
+async function pingOne(url){
+  try{
+    const ctl = new AbortController();
+    const to = setTimeout(()=>ctl.abort(), 8000);
+    const r = await fetch(url + (url.includes('?')?'&':'?') + 't=' + Date.now(), { cache:'no-store', signal: ctl.signal });
+    clearTimeout(to);
+    return r.ok;
+  }catch(e){ return false; }
+}
+
+async function systemAnswer(){
+  const res = await Promise.all(SYS_LINKS.map(async ([n,u]) => [n, await pingOne(u)]));
+  const ok = res.filter(x => x[1]).length;
+  const dead = res.filter(x => !x[1]).map(x => x[0]);
+  let market = '';
+  try{
+    const d = await marketData();
+    if (d){
+      const n = d.rows.find(r => r.symbol === '^NSEI');
+      const b = d.rows.find(r => r.symbol === '^NSEBANK');
+      const bits = [];
+      if (n) bits.push('Nifty ' + marketNum(n.last) + (n.change_pct>=0?' upar ':' neeche ') + marketNum(Math.abs(n.change_pct)) + ' percent');
+      if (b) bits.push('Bank Nifty ' + marketNum(b.last));
+      market = bits.join(', ');
+    }
+  }catch(e){}
+  const speech = `${ok} tool chal rahe hain, ${res.length} mein se.`
+    + (dead.length ? ` Nahi chal rahe: ${dead.join(', ')}.` : ' Sab theek hain.')
+    + (market ? ' ' + market + '.' : '');
+  return {
+    title: 'System ka haal',
+    body: res.map(x => (x[1] ? '✅ ' : '❌ ') + x[0]).join(' · ') + (market ? '<br>' + market : ''),
+    speech
+  };
+}
+
+function toolFromText(t){
+  const map = [
+    [/trader|trading|market app|chart/, 'trader'],
+    [/builder|app banao|app banane/, 'builder'],
+    [/doctor|jaanch|daktar/, 'doctor'],
+    [/gyan|sehat|padhai|robot/, 'gyan'],
+    [/map|status|kaun zinda/, 'map'],
+    [/vault|password|tijori/, 'vault'],
+    [/hub|darwaza|home/, 'hub']
+  ];
+  for (const [re, k] of map) if (re.test(t)) return k;
   return null;
 }
 
