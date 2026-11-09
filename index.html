@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v29</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v30</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -426,14 +426,29 @@ function buildRec(){
     status('Sun raha hoon… boliye', 'live');
     $('transcript').innerHTML = '<span class="interim">…</span>';
   };
+  let interimBuf = '', interimTimer = null;
   r.onresult = (ev) => {
     let interim = '', final = '';
     for (let i = ev.resultIndex; i < ev.results.length; i++){
       const t = ev.results[i][0].transcript;
       if (ev.results[i].isFinal) final += t; else interim += t;
     }
-    if (interim) $('transcript').innerHTML = '<span class="interim">'+escapeHtml(interim)+'</span>';
+    if (interim){
+      interimBuf = interim;
+      $('transcript').innerHTML = '<span class="interim">'+escapeHtml(interim)+'</span>';
+      clearTimeout(interimTimer);
+      interimTimer = setTimeout(() => {
+        if (!final && interimBuf.trim().length > 1){
+          const said = interimBuf.trim();
+          interimBuf = '';
+          $('transcript').textContent = said;
+          try{ handle(said); }catch(e){}
+        }
+      }, 1400);
+    }
     if (final){
+      clearTimeout(interimTimer);
+      interimBuf = '';
       markWorking();
       $('transcript').textContent = final;
       try{
@@ -517,8 +532,10 @@ function runRec(){
   if (!micOn) return;
   try{
     rec = buildRec();
-    applyCfgTo(rec);
+    rec.lang = state.lang || 'hi-IN';
+    rec.continuous = false;
     rec.interimResults = true;
+    rec.maxAlternatives = 3;
     rec.onend = () => {
       if (micOn){ clearTimeout(micTimer); micTimer = setTimeout(runRec, 300); }
       else { state.listening = false; $('mic').classList.remove('listening'); }
