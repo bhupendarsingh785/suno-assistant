@@ -41,7 +41,7 @@
 <body>
 
 <h1>Suno Live</h1>
-<p class="sub">Ek button — camera, sunna aur bolna, sab saath. Band karne ke liye dobara dabao.</p>
+<p class="sub">Ek button — camera, sunna aur bolna, sab saath · <b style="color:#22d3ee">v14</b></p>
 
 <video id="cam" autoplay playsinline muted></video>
 <button class="mic" id="mic">🎙️</button>
@@ -51,7 +51,13 @@
 <div class="say" id="heard">…</div>
 <div class="reply" id="reply">Bolo, main sun rahi hoon.</div>
 
+<div id="permBox" style="display:none;width:100%;max-width:420px;background:rgba(251,113,133,.1);
+     border:1px solid rgba(251,113,133,.45);border-radius:16px;padding:12px 14px;font-size:13.5px;line-height:1.6;color:#ffd0d8">
+  <b>Mic ki permission chahiye.</b> Neeche <b>🎤 Permission do</b> dabao → <b>Allow</b> karo.
+</div>
+
 <div class="row">
+  <button class="btn" id="permBtn">🎤 Permission do</button>
   <button class="btn" id="lookBtn" style="display:none">👁️ Dekho</button>
   <button class="btn" id="clearBtn">Nayi baat</button>
 </div>
@@ -184,6 +190,17 @@ async function askAI(prompt){
   return null;
 }
 
+function localAnswer(said){
+  const t = said.toLowerCase();
+  if (/(kaun ho|tumhara naam|tum kaun)/.test(t)) return "Main Suno hoon — Swag ki apni assistant. Bolo, main sunungi.";
+  if (/(kaise ho|kya haal|namaste|hello)/.test(t)) return "Main theek hoon. Tum batao, kya karna hai?";
+  if (/(market|nifty|sensex|reliance)/.test(t)) return "Market ka live data Trader app me hai — Nifty, Bank Nifty, entry-stop-target sab.";
+  if (/(system|tool)/.test(t)) return "System me Trader, Builder, Doctor, Gyan, Vault, Map aur Hub — sab jude hain.";
+  if (/(udaas|pareshan|thak|mann nahi)/.test(t)) return "Sun rahi hoon. Batao kya hua — main yahin hoon.";
+  if (/(time|baje)/.test(t)) { const d=new Date(); return "Abhi " + d.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}) + " baje hain."; }
+  return "Samajh gayi. Thoda saaf bolo ya dobara bolo, main dhyan se sun rahi hoon.";
+}
+
 async function answer(said){
   stopRec();
   $("state").textContent = "Soch rahi hoon…";
@@ -198,7 +215,9 @@ async function answer(said){
     : "";
   const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant. Roman Hindi me, 2-3 chhoti line, seedha jawab. '
     + moodLine + " " + (past ? "Pichhli baat:\n" + past + "\n" : "") + 'Ab Swag ne kaha: "' + said + '"';
-  const t = await askAI(prompt);
+  let t = null;
+  try{ t = await askAI(prompt); }catch(e){}
+  if (!t) t = localAnswer(said);
   if (t){
     $("reply").textContent = t.trim();
     try{ if (window.SeetalCore) SeetalCore.push("chat", { who:"assistant", text: t.trim().slice(0,300) }); }catch(e){}
@@ -219,8 +238,28 @@ function paint(){
   $("state").textContent = S.on ? "Sun rahi hoon…" : "Dabao — main sunungi aur dekhungi";
 }
 
+function showPerm(msg){
+  const b = document.getElementById("permBox");
+  if (b) b.style.display = "block";
+  if (msg) $("state").textContent = msg;
+}
+function hidePerm(){ const b = document.getElementById("permBox"); if (b) b.style.display = "none"; }
+
+async function askMic(){
+  try{
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+    st.getTracks().forEach(t => t.stop());
+    hidePerm();
+    $("state").textContent = "Permission mil gayi — ab mic dabao";
+    return true;
+  }catch(e){ showPerm("Mic band hai — Chrome me Allow karo"); return false; }
+}
+const _pb = document.getElementById("permBtn");
+if (_pb) _pb.onclick = askMic;
+
 $("mic").onclick = async () => {
   if (!SR){ $("state").textContent = "Is browser me voice nahi — Chrome use karo"; return; }
+  if (!S.on){ const okPerm = await askMic(); if (!okPerm) return; }
   S.on = !S.on;
   paint();
   if (S.on){
@@ -325,6 +364,10 @@ $("memClear").onclick = () => { try{ SeetalCore.clear("chat"); }catch(e){} paint
 function paintMem(){ try{ $("memCount").textContent = SeetalCore.list("chat").length + " baatein"; }catch(e){} }
 $("clearBtn").onclick = () => { $("heard").textContent = "…"; $("reply").textContent = "Bolo, main sun rahi hoon."; };
 
+try{
+  if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(()=>{});
+  if ('caches' in window) caches.keys().then(ks => ks.forEach(k => caches.delete(k))).catch(()=>{});
+}catch(e){}
 try{ if (window.SeetalCore) SeetalCore.visit("suno-live"); }catch(e){}
 paintMem();
 paint();
