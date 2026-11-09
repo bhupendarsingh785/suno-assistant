@@ -165,7 +165,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v34</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v35</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -479,23 +479,35 @@ function buildRec(){
   };
   return r;
 }
-function speakReplySafe(said){
-  const before = ($('replyText') ? $('replyText').textContent : '');
-  try{ handle(said); }catch(err){
-    reply('⚠️','Andar dikkat', escapeHtml(String(err && err.message || err)).slice(0,140));
-    return;
+async function speakReplySafe(said){
+  // awaaz se aaya text: pehle turant local jawab, phir AI se behtar
+  const txt = String(said || '').trim();
+  if (!txt) return;
+
+  try{
+    $('transcript').textContent = txt;
+    const loc = localAnswer(txt);
+    reply('💬','Suno', escapeHtml(loc).replace(/\n/g,'<br>'));
+    say(loc);
+    addHistory(txt, 'Jawab diya');
+    status(micOn ? 'Sun rahi hoon…' : 'Mic dabao aur bolo');
+  }catch(e){
+    reply('⚠️','Dikkat', escapeHtml(String(e.message||e)).slice(0,120));
   }
-  // 1.2 second baad bhi jawab nahi aaya to local se de do
-  setTimeout(() => {
-    const now = ($('replyText') ? $('replyText').textContent : '');
-    if (now === before || !now.trim() || now.trim() === 'Bolo, main sun rahi hoon.'){
-      const t = localAnswer(said);
-      reply('💬','Suno', escapeHtml(t).replace(/\n/g,'<br>'));
-      say(t);
+
+  // AI se behtar jawab (agar mile to badal do)
+  try{
+    const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant. Roman Hindi me 2-3 chhoti line, seedha jawab, '
+      + 'aakhir me ek chhota sawal. Swag ne kaha: "' + txt + '"';
+    const ai = await apiAsk(prompt, 12000);
+    if (ai && ai.trim().length > 8){
+      reply('💬','Suno', escapeHtml(ai.trim()).replace(/\n/g,'<br>'));
+      say(ai.trim());
     }
-    // jawab ke baad mic chalu rakho
-    if (micOn && !state.listening){ setTimeout(()=>{ try{ if (micOn) runRec(); }catch(e){} }, 500); }
-  }, 1200);
+  }catch(e){}
+
+  // mic chalu rakho
+  if (micOn && !state.listening) setTimeout(()=>{ try{ if (micOn) runRec(); }catch(e){} }, 400);
 }
 
 function stopUI(){
