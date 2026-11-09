@@ -2166,6 +2166,40 @@ renderLearn();
   document.addEventListener('click', () => setTimeout(addUI, 300));
   setTimeout(addUI, 1200);
 })();
+
+/* ================= v42: awaaz ko haath lagaye bina chalu karna ================= */
+(function(){
+  let unlocked = false;
+  function unlockTTS(){
+    if (unlocked) return;
+    unlocked = true;
+    try{
+      // ek khaali utterance — Android ko "permission" mil jati hai
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0; u.rate = 2;
+      speechSynthesis.speak(u);
+      speechSynthesis.cancel();
+      try{ speechSynthesis.getVoices(); }catch(e){}
+    }catch(e){}
+  }
+  // pehla touch / click / key — bas usi se awaaz khul jayegi
+  ['pointerdown','touchstart','click','keydown'].forEach(ev =>
+    document.addEventListener(ev, unlockTTS, { once: true, passive: true })
+  );
+
+  // jo bhi jawab aaye, woh khud bole (agar speak on hai)
+  if (typeof window.say === 'function'){
+    // say() pehle se reply ke baad bula ja raha hai; bas ensure karo ki speak on ho
+    try{
+      if (typeof state === 'object' && state && state.speak === false){
+        // user ne band kiya ho to respect karo, warna chhod do
+      }
+    }catch(e){}
+  }
+
+  // "Suno" ke baad bhi chup na rahe — agar speaking queue khaali hai to dobara bolo
+  window.speakNow = function(txt){ try{ if (typeof say === 'function') say(txt); }catch(e){} };
+})();
 </script>
 </body>
 </html>
