@@ -57,7 +57,7 @@
 
 <div class="head">
   <h1>Suno Live</h1>
-  <p>Ek button — dekhna, sunna, bolna, sab saath</p>
+  <p>Ek button — dekhna, sunna, bolna, sab saath · <b style="color:#22d3ee">v10</b></p>
 </div>
 
 <div class="chip" id="chip">Band</div>
@@ -411,6 +411,13 @@ $("typeIn").addEventListener("keydown", (e) => { if (e.key === "Enter") sendType
 
 $("clearBtn").onclick = () => { $("heard").textContent = "…"; $("reply").textContent = "Bolo, main sun rahi hoon."; };
 
+/* is page ko purana cache hamesha na dikhe */
+try{
+  if ('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(()=>{});
+  }
+  if ('caches' in window){ caches.keys().then(ks => ks.forEach(k => caches.delete(k))).catch(()=>{}); }
+}catch(e){}
 try{ if (window.SeetalCore) SeetalCore.visit("suno-live"); }catch(e){}
 paintMem();
 paint();
