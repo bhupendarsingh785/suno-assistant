@@ -150,7 +150,7 @@
       <div class="logo">S</div>
       <div>
         <h1>Suno</h1>
-        <p>Awaaz se phone control · <b style="color:#22d3ee">v18</b></p>
+        <p>Awaaz se phone control · <b style="color:#22d3ee">v20</b></p>
       </div>
     </div>
     <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
@@ -707,10 +707,40 @@ function renderNotes(){
 /* ============ main handler ============ */
 const CHAIN_VERB = /\b(kholo|khol|open|search|dhundo|dhoondo|call|bhejo|bhej|send|likho|note|batao|bata|dikhao|chalao|play|lagao|timer|alarm|mausam|weather|time|date)\b/;
 
+
+/* Devanagari se Roman — mic Hindi me likhta hai, engine Roman samajhta hai */
+const DEV_MAP = {
+  'अ':'a','आ':'aa','इ':'i','ई':'ee','उ':'u','ऊ':'oo','ए':'e','ऐ':'ai','ओ':'o','औ':'au','ऋ':'ri',
+  'क':'k','ख':'kh','ग':'g','घ':'gh','ङ':'n','च':'ch','छ':'chh','ज':'j','झ':'jh','ञ':'n',
+  'ट':'t','ठ':'th','ड':'d','ढ':'dh','ण':'n','त':'t','थ':'th','द':'d','ध':'dh','न':'n',
+  'प':'p','फ':'ph','ब':'b','भ':'bh','म':'m','य':'y','र':'r','ल':'l','व':'v',
+  'श':'sh','ष':'sh','स':'s','ह':'h','ळ':'l',
+  'ज़':'z','फ़':'f','क़':'q','ख़':'kh','ग़':'g','ड़':'r','ढ़':'rh',
+  'ा':'aa','ि':'i','ी':'ee','ु':'u','ू':'oo','े':'e','ै':'ai','ो':'o','ौ':'au','ृ':'ri',
+  'ं':'n','ँ':'n','ः':'h','्':'','़':'',
+  '०':'0','१':'1','२':'2','३':'3','४':'4','५':'5','६':'6','७':'7','८':'8','९':'9',
+  '।':' ','॥':' ','‘':'','’':'','“':'','”':''
+};
+function translit(str){
+  let out = '';
+  const s = String(str || '');
+  for (let i = 0; i < s.length; i++){
+    const ch = s[i];
+    if (DEV_MAP[ch] !== undefined){
+      out += DEV_MAP[ch];
+      // 'aa' ko 'a' — taaki "naam" aur "nam" dono match karein
+      out = out.replace(/aa/g, 'a').replace(/ee/g, 'i').replace(/oo/g, 'u');
+    } else out += ch;
+  }
+  return out;
+}
+
 async function handle(raw, _depth){
   const text = (raw||'').trim();
   if (!text) return;
-  const t = norm(text);
+  // Devanagari aaya to Roman me badal do (mic aisa hi likhta hai)
+  const roman = translit(text);
+  const t = norm(roman);
   const t2 = wordsToNum(t);
   status('Samajh raha hoon…', 'busy');
 
@@ -1265,9 +1295,9 @@ function docShowErrors(){
 
 function localAnswer(said){
   const t = String(said || '').toLowerCase();
-  if (/(naam kya|tumhara naam|aapka naam|kaun ho|tum kaun)/.test(t))
+  if (/(nam kya|naam kya|tumhara nam|apka nam|aapka naam|kaun ho|tum kaun|naam batao)/.test(t))
     return "Mera naam Suno hai. Main tumhari assistant hoon — bolo ya likho, main jawab dungi.";
-  if (/(kaise ho|kya haal|namaste|hello|hi\b)/.test(t))
+  if (/(kaise ho|kya hal|kya haal|namaste|hello|hi\b)/.test(t))
     return "Main theek hoon. Tum batao — kya karna hai?";
   if (/(sun sakte|sun sakti|sunna|mic)/.test(t))
     return "Haan, main sun sakti hoon. Mic dabao aur bolo — pehli baar browser permission maangega, usme Allow karna.";
