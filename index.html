@@ -2254,7 +2254,7 @@ renderLearn();
   setTimeout(addUI, 1500);
 })();
 
-/* ================= v47: mirror links khud bhar do ================= */
+/* ================= v48: mirror links khud bhar do ================= */
 (function(){
   const DEFAULTS = [
     'https://bhupendarsingh785.github.io/suno-assistant/',
@@ -2276,7 +2276,7 @@ renderLearn();
   setTimeout(fill, 1200);
 })();
 
-/* ================= v47: ek button, sab kuch + shared APIs ================= */
+/* ================= v48: ek button, sab kuch + shared APIs ================= */
 (function(){
   /* 1) awaaz hamesha chalu — alag button ki zaroorat nahi */
   try{
@@ -2311,6 +2311,74 @@ renderLearn();
     window.say = function(t, r){
       try{ if (typeof state === 'object' && state) state.speak = true; }catch(e){}
       return _say(t, r);
+    };
+  }
+})();
+
+/* ================= v48: bakwas filter + app me kholna + variety ================= */
+(function(){
+  /* 1) chhote/noise wale shabd ignore — "बस", "haan", "ok" par jawab nahi */
+  const JUNK = /^(bas|बस|haan|हाँ|हां|ok|okay|hmm|अच्छा|acha|theek|ठीक|hello|हेलो|ho|हो|ji|जी)$/i;
+  let lastSaid = "", lastAt = 0;
+
+  if (typeof handle === 'function'){
+    const _h = handle;
+    window.handle = async function(raw, depth){
+      const t = String(raw || '').trim();
+      const clean = t.replace(/[^\p{L}\p{N}\s]/gu, "").trim();
+      if (clean.length < 3 || JUNK.test(clean)) return;           // noise
+      if (clean === lastSaid && Date.now() - lastAt < 12000) return; // wahi baat dobara
+      lastSaid = clean; lastAt = Date.now();
+      return _h(raw, depth);
+    };
+  }
+
+  /* 2) phone ka asli app kholo, browser nahi */
+  const APP = {
+    whatsapp:  { app: "whatsapp://send", web: "https://web.whatsapp.com" },
+    instagram: { app: "instagram://app", web: "https://www.instagram.com" },
+    facebook:  { app: "fb://", web: "https://m.facebook.com" },
+    youtube:   { app: "vnd.youtube://", web: "https://m.youtube.com" },
+    telegram:  { app: "tg://", web: "https://web.telegram.org" },
+    gmail:     { app: "mailto:", web: "https://mail.google.com" },
+    maps:      { app: "geo:0,0?q=", web: "https://maps.google.com" },
+    amazon:    { app: "com.amazon.mobile.shopping://", web: "https://www.amazon.in" },
+    flipkart:  { app: "flipkart://", web: "https://www.flipkart.com" },
+    paytm:     { app: "paytmmp://", web: "https://paytm.com" },
+    phonepe:   { app: "phonepe://", web: "https://www.phonepe.com" },
+    swiggy:    { app: "swiggy://", web: "https://www.swiggy.com" },
+    zomato:    { app: "zomato://", web: "https://www.zomato.com" },
+  };
+  window.openAppFirst = function(key, fallback){
+    const e = APP[String(key || "").toLowerCase()];
+    if (!e) { window.open(fallback || "about:blank", "_blank"); return; }
+    let left = false;
+    const onHide = () => { left = true; };
+    document.addEventListener("visibilitychange", onHide, { once: true });
+    try { window.location.href = e.app; } catch (err) {}
+    setTimeout(() => {
+      document.removeEventListener("visibilitychange", onHide);
+      if (!left && !document.hidden) window.open(e.web, "_blank");
+    }, 1200);
+  };
+
+  /* 3) jawab hamesha alag lage — same line dobara nahi */
+  const VARIANTS = [
+    "Haan bolo na, sun rahi hoon.",
+    "Achha, aur kya?",
+    "Batao na, kya chal raha hai?",
+    "Hmm, main yahin hoon — bolo.",
+  ];
+  let vi = 0;
+  if (typeof localAnswer === "function"){
+    const _loc = localAnswer;
+    window.localAnswer = function(t){
+      const out = _loc(t);
+      if (/Aur batao — kya chal raha hai|thoda saaf nahi aaya/.test(out)){
+        vi = (vi + 1) % VARIANTS.length;
+        return VARIANTS[vi];
+      }
+      return out;
     };
   }
 })();
