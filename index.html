@@ -2254,7 +2254,7 @@ renderLearn();
   setTimeout(addUI, 1500);
 })();
 
-/* ================= v49: mirror links khud bhar do ================= */
+/* ================= v50: mirror links khud bhar do ================= */
 (function(){
   const DEFAULTS = [
     'https://bhupendarsingh785.github.io/suno-assistant/',
@@ -2276,7 +2276,7 @@ renderLearn();
   setTimeout(fill, 1200);
 })();
 
-/* ================= v49: ek button, sab kuch + shared APIs ================= */
+/* ================= v50: ek button, sab kuch + shared APIs ================= */
 (function(){
   /* 1) awaaz hamesha chalu — alag button ki zaroorat nahi */
   try{
@@ -2315,7 +2315,7 @@ renderLearn();
   }
 })();
 
-/* ================= v49: bakwas filter + app me kholna + variety ================= */
+/* ================= v50: bakwas filter + app me kholna + variety ================= */
 (function(){
   /* 1) chhote/noise wale shabd ignore — "बस", "haan", "ok" par jawab nahi */
   const JUNK = /^(bas|बस|haan|हाँ|हां|ok|okay|hmm|अच्छा|acha|theek|ठीक|hello|हेलो|ho|हो|ji|जी)$/i;
@@ -2383,7 +2383,7 @@ renderLearn();
   }
 })();
 
-/* ================= v49: AI jaisa nahi, insaan jaisa bole ================= */
+/* ================= v50: AI jaisa nahi, insaan jaisa bole ================= */
 (function(){
   /* markdown/robot marks saaf karo — bolne layak banao */
   window.cleanForSpeech = function(t){
@@ -2422,6 +2422,92 @@ renderLearn();
       return _rep(icon, title, html);
     };
   }
+})();
+
+/* ================= v50: insaan jaisi awaaz ================= */
+(function(){
+  const LS_VOICE = "seetal.voiceURI";
+
+  function rank(v){
+    const n = (v.name || "").toLowerCase();
+    let sc = 0;
+    if (/^hi(-|_)?in/i.test(v.lang || "")) sc += 100;
+    else if (/^en-in/i.test(v.lang || "")) sc += 60;
+    if (n.includes("google")) sc += 40;
+    if (n.includes("natural") || n.includes("neural")) sc += 35;
+    if (n.includes("online") || n.includes("network")) sc += 20;
+    if (n.includes("female") || n.includes("zira") || n.includes("swara") || n.includes("kalpana") || n.includes("heera")) sc += 15;
+    if (n.includes("espeak") || n.includes("compact") || n.includes("robot")) sc -= 50;
+    if (v.localService === false) sc += 10;
+    return sc;
+  }
+
+  function applyBest(){
+    try{
+      if (!Array.isArray(window.voices)) return;
+      const chosen = localStorage.getItem(LS_VOICE);
+      let list = window.voices.slice();
+      if (chosen){
+        const pick = list.find(v => v.voiceURI === chosen);
+        if (pick) list = [pick].concat(list.filter(v => v !== pick));
+      } else {
+        list.sort((a, b) => rank(b) - rank(a));
+      }
+      // pehla hi-IN sabse aage — say() wahi uthata hai
+      const hi = list.filter(v => /^hi/i.test(v.lang || ""));
+      const rest = list.filter(v => !/^hi/i.test(v.lang || ""));
+      window.voices.length = 0;
+      hi.concat(rest).forEach(v => window.voices.push(v));
+    }catch(e){}
+  }
+
+  setTimeout(applyBest, 600);
+  setTimeout(applyBest, 2000);
+  if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => { try{ loadVoices(); }catch(e){} applyBest(); };
+
+  /* Settings me "Awaaz chuno" list */
+  function addVoicePicker(){
+    try{
+      const host = document.querySelector("#settingsSheet .inner") || document.querySelector("#settingsSheet");
+      if (!host || document.getElementById("voicePick")) return;
+      const box = document.createElement("div");
+      box.id = "voicePick";
+      box.style.cssText = "margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)";
+      const vs = (window.voices || []).filter(v => /^(hi|en)/i.test(v.lang || ""));
+      box.innerHTML = '<div class="field"><label>Awaaz chuno (jo achhi lage)</label></div>'
+        + '<div id="voiceList" style="max-height:190px;overflow:auto"></div>'
+        + '<button class="btn" id="voiceTest" style="margin-top:8px">🔊 Sun kar dekho</button>';
+      host.appendChild(box);
+
+      const cur = localStorage.getItem(LS_VOICE) || "";
+      const list = box.querySelector("#voiceList");
+      list.innerHTML = vs.slice(0, 20).map(v =>
+        '<div class="row" style="align-items:center;gap:8px;padding:6px 0">'
+        + '<input type="radio" name="vpick" value="' + v.voiceURI + '"' + (v.voiceURI === cur ? " checked" : "") + '>'
+        + '<div style="min-width:0"><div class="l">' + v.name + '</div><div class="s">' + v.lang + '</div></div></div>'
+      ).join("") || '<div class="empty">Koi awaaz nahi mili — Chrome me awaaz install karo.</div>';
+
+      list.querySelectorAll('input[name="vpick"]').forEach(r => r.onchange = () => {
+        localStorage.setItem(LS_VOICE, r.value);
+        applyBest();
+        try{ if (typeof toast === "function") toast("Awaaz set ho gayi"); }catch(e){}
+      });
+
+      box.querySelector("#voiceTest").onclick = () => {
+        try{
+          const u = new SpeechSynthesisUtterance("Namaste, main Suno hoon. Aap kaise ho?");
+          const chosen = localStorage.getItem(LS_VOICE);
+          const v = (window.voices || []).find(x => x.voiceURI === chosen) || (window.voices || [])[0];
+          if (v){ u.voice = v; u.lang = v.lang; }
+          u.rate = 1; u.pitch = 1;
+          speechSynthesis.cancel();
+          speechSynthesis.speak(u);
+        }catch(e){}
+      };
+    }catch(e){}
+  }
+  document.addEventListener("click", () => setTimeout(addVoicePicker, 400));
+  setTimeout(addVoicePicker, 1800);
 })();
 </script>
 </body>
