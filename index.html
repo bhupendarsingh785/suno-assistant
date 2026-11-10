@@ -470,7 +470,7 @@ function say(text){
       if (gen !== speakGen) return;
       speakingNow = false;
       speakCooldown = Date.now() + 900;
-      if (micOn) setTimeout(() => { try{ if (micOn && !speakingNow) runRec(); }catch(e){} }, 700);
+      if (micOn) setTimeout(() => { try{ if (micOn && !speakingNow) runRec(); }catch(e){} }, 600);
     };
     const speakChunk = (c) => new Promise(resolve => {
       const u = new SpeechSynthesisUtterance(c);
@@ -527,7 +527,7 @@ function buildRec(){
           $('transcript').textContent = said;
           speakReplySafe(said);
         }
-      }, 1200);
+      }, 600);
     }
     if (final){
       clearTimeout(interimTimer);
@@ -1548,26 +1548,31 @@ async function smartReply(txt, opts){
   opts = opts || {};
   const said = String(txt || '').trim();
   if (!said) return;
-  status('Soch rahi hoon…', 'busy');
-  if (!opts.keepPlaceholder) reply('💬','Suno', 'Soch rahi hoon…');
 
+  // 1) TURANT kuch dikhao (0 second) — user ko intezaar ka ehsaas na ho
+  const quick = localAnswer(said);
+  reply('💬','Suno', escapeHtml(quick).replace(/\n/g,'<br>'));
+  status('Soch rahi hoon…', 'busy');
+
+  // 2) AI se behtar jawab — aaye to badal do
   let ai = null;
   try{
-    const past = (state.history || []).slice(0,4).map(h => h.cmd).join(' | ');
-    const prompt = 'Tum "Suno" ho — Swag ki Hinglish voice assistant, ek dost jaisi, thodi girlish. '
-      + 'Roman Hindi me 2-3 chhoti line me seedha jawab do, aur aakhir me ek chhota sawal poochho. '
-      + 'Bilkul insaan ki tarah baat karo, robot jaisa nahi. '
-      + (past ? 'Pichhli baatein: ' + past + '. ' : '')
-      + 'Swag ne kaha: "' + said + '"';
-    ai = await apiAsk(prompt, 14000);
+    const prompt = 'Tum Suno ho — Swag ki Hinglish dost. 1-2 chhoti line, seedha jawab, Roman Hindi, '
+      + 'aam bolchaal (arre, yaar, achha). Aakhir me ek chhota sawal. Swag: "' + said + '"';
+    ai = await apiAsk(prompt, 8000);
   }catch(e){}
 
-  const finalText = (ai && ai.trim().length > 8) ? ai.trim() : localAnswer(said);
-  reply('💬','Suno', escapeHtml(finalText).replace(/\n/g,'<br>'));
-  say(finalText);
+  if (ai && ai.trim().length > 5){
+    const t = ai.trim();
+    reply('💬','Suno', escapeHtml(t).replace(/\n/g,'<br>'));
+    say(t);
+  } else {
+    say(quick);
+  }
+
   try{ addHistory(said, 'Jawab diya'); }catch(e){}
   status(micOn ? 'Sun rahi hoon…' : 'Mic dabao aur bolo');
-  return finalText;
+  return ai || quick;
 }
 
 function localAnswer(said){
@@ -2249,7 +2254,7 @@ renderLearn();
   setTimeout(addUI, 1500);
 })();
 
-/* ================= v46: mirror links khud bhar do ================= */
+/* ================= v47: mirror links khud bhar do ================= */
 (function(){
   const DEFAULTS = [
     'https://bhupendarsingh785.github.io/suno-assistant/',
@@ -2271,7 +2276,7 @@ renderLearn();
   setTimeout(fill, 1200);
 })();
 
-/* ================= v46: ek button, sab kuch + shared APIs ================= */
+/* ================= v47: ek button, sab kuch + shared APIs ================= */
 (function(){
   /* 1) awaaz hamesha chalu — alag button ki zaroorat nahi */
   try{
