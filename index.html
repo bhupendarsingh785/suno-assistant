@@ -2254,7 +2254,7 @@ renderLearn();
   setTimeout(addUI, 1500);
 })();
 
-/* ================= v48: mirror links khud bhar do ================= */
+/* ================= v49: mirror links khud bhar do ================= */
 (function(){
   const DEFAULTS = [
     'https://bhupendarsingh785.github.io/suno-assistant/',
@@ -2276,7 +2276,7 @@ renderLearn();
   setTimeout(fill, 1200);
 })();
 
-/* ================= v48: ek button, sab kuch + shared APIs ================= */
+/* ================= v49: ek button, sab kuch + shared APIs ================= */
 (function(){
   /* 1) awaaz hamesha chalu — alag button ki zaroorat nahi */
   try{
@@ -2315,7 +2315,7 @@ renderLearn();
   }
 })();
 
-/* ================= v48: bakwas filter + app me kholna + variety ================= */
+/* ================= v49: bakwas filter + app me kholna + variety ================= */
 (function(){
   /* 1) chhote/noise wale shabd ignore — "बस", "haan", "ok" par jawab nahi */
   const JUNK = /^(bas|बस|haan|हाँ|हां|ok|okay|hmm|अच्छा|acha|theek|ठीक|hello|हेलो|ho|हो|ji|जी)$/i;
@@ -2379,6 +2379,47 @@ renderLearn();
         return VARIANTS[vi];
       }
       return out;
+    };
+  }
+})();
+
+/* ================= v49: AI jaisa nahi, insaan jaisa bole ================= */
+(function(){
+  /* markdown/robot marks saaf karo — bolne layak banao */
+  window.cleanForSpeech = function(t){
+    let x = String(t || "");
+    x = x.replace(/```[\s\S]*?```/g, " ");          // code blocks
+    x = x.replace(/[*_#>`]/g, "");                   // markdown marks
+    x = x.replace(/^\s*[-•*]\s+/gm, "");             // bullets
+    x = x.replace(/^\s*\d+[.)]\s+/gm, "");           // numbers
+    x = x.replace(/\[(.*?)\]\(.*?\)/g, "$1");        // links
+    x = x.replace(/\s+/g, " ").trim();
+    const lines = x.split(/(?<=[.!?।])\s+/).filter(Boolean);
+    return lines.slice(0, 3).join(" ");              // 3 line se zyada nahi
+  };
+
+  /* har AI call ke saath sakht style — GPT/Gemini jaisa nahi */
+  if (typeof apiAsk === "function"){
+    const _api = apiAsk;
+    window.apiAsk = async function(prompt, ms){
+      const style = "TUM EK INSAAN KI TARAH BOLTI HO, AI ki tarah NAHI. "
+        + "Sakht niyam: (1) sirf 1-2 chhoti line, (2) koi list, bullet, heading, emoji, markdown nahi, "
+        + "(3) 'Certainly', 'Here is', 'As an AI', 'main aapki madad kar sakti hoon' jaisa robot vaala bhashan nahi, "
+        + "(4) jaise phone par dost se baat karti ho waise — arre, yaar, achha, haan na, bas. "
+        + "(5) seedha jawab, phir ek chhota sawal. ";
+      const out = await _api(style + "\n\n" + String(prompt || ""), ms);
+      return out ? cleanForSpeech(out) : out;
+    };
+  }
+
+  /* jo bhi reply screen par jaye, saaf ho */
+  if (typeof reply === "function"){
+    const _rep = reply;
+    window.reply = function(icon, title, html){
+      try{
+        if (typeof html === "string" && !/</.test(html)) html = escapeHtml(cleanForSpeech(html));
+      }catch(e){}
+      return _rep(icon, title, html);
     };
   }
 })();
