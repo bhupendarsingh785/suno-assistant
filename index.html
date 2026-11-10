@@ -634,7 +634,7 @@ function runRec(){
     rec.lang = state.lang || 'hi-IN';
     rec.continuous = true;
     rec.interimResults = true;
-    rec.maxAlternatives = 3;
+    rec.maxAlternatives = 5;
     rec.onend = () => {
       if (micOn){ clearTimeout(micTimer); recBusy = false;
       micTimer = setTimeout(runRec, 700); }
@@ -1182,7 +1182,7 @@ async function handle(raw, _depth){
   }
   {
     const loc = localAnswer(text);
-    const generic = /Main samajh rahi hoon tumne kaha/.test(loc);
+    const generic = /thoda saaf nahi aaya|Aur batao — kya chal raha hai/.test(loc);
 
     if (!generic){
       reply('💬','Suno', escapeHtml(loc).replace(/\n/g,'<br>'));
@@ -1588,7 +1588,10 @@ function localAnswer(said){
     return "Sun rahi hoon. Batao kya hua — main yahin hoon.";
   if (/(time|samay|baje)/.test(t)) { const d=new Date(); return "Abhi " + d.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}) + " baje hain."; }
   if (/(date|tareekh|aaj)/.test(t)) { const d=new Date(); return "Aaj " + d.toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"}) + " hai."; }
-  return "Main samajh rahi hoon tumne kaha: \"" + String(said).slice(0,50) + "\". Thoda saaf bolo ya doosre shabdon me bolo, main dhyan se sun rahi hoon.";
+  // parrot nahi — insaan jaisa jawab
+  if (/\?$/.test(String(said).trim()) || /(kya|kaise|kyun|kab|kahan|kaun)/i.test(said))
+    return "Hmm, ye thoda saaf nahi aaya. Ek baar phir se bolo na?";
+  return "Achha. Aur batao — kya chal raha hai?";
 }
 
 async function freeAI(prompt){
@@ -2246,7 +2249,7 @@ renderLearn();
   setTimeout(addUI, 1500);
 })();
 
-/* ================= v45: mirror links khud bhar do ================= */
+/* ================= v46: mirror links khud bhar do ================= */
 (function(){
   const DEFAULTS = [
     'https://bhupendarsingh785.github.io/suno-assistant/',
@@ -2268,7 +2271,7 @@ renderLearn();
   setTimeout(fill, 1200);
 })();
 
-/* ================= v45: ek button, sab kuch + shared APIs ================= */
+/* ================= v46: ek button, sab kuch + shared APIs ================= */
 (function(){
   /* 1) awaaz hamesha chalu — alag button ki zaroorat nahi */
   try{
