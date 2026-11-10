@@ -2246,7 +2246,7 @@ renderLearn();
   setTimeout(addUI, 1500);
 })();
 
-/* ================= v44: mirror links khud bhar do ================= */
+/* ================= v45: mirror links khud bhar do ================= */
 (function(){
   const DEFAULTS = [
     'https://bhupendarsingh785.github.io/suno-assistant/',
@@ -2266,6 +2266,45 @@ renderLearn();
     }catch(e){}
   }
   setTimeout(fill, 1200);
+})();
+
+/* ================= v45: ek button, sab kuch + shared APIs ================= */
+(function(){
+  /* 1) awaaz hamesha chalu — alag button ki zaroorat nahi */
+  try{
+    if (typeof state === 'object' && state){ state.speak = true; }
+    localStorage.setItem('speak', 'true');
+  }catch(e){}
+
+  /* 2) "🔊 Suno" wale chhote button chhupao — sirf ek bada button rahe */
+  const hide = document.createElement('style');
+  hide.textContent = '#speakReply{display:none !important}';
+  document.head.appendChild(hide);
+
+  /* 3) shared free APIs ko apiAsk me jodo (tumhari key fail ho to bhi jawab) */
+  if (typeof apiAsk === 'function' && window.SeetalAPIs){
+    const _api = apiAsk;
+    window.apiAsk = async function(prompt, ms){
+      try{
+        const r = await _api(prompt, ms);
+        if (r && String(r).trim().length > 2) return r;
+      }catch(e){}
+      try{
+        const a = await SeetalAPIs.ask(prompt, { timeout: ms || 14000 });
+        if (a && a.ok) return a.text;
+      }catch(e){}
+      return null;
+    };
+  }
+
+  /* 4) jawab ke baad hamesha bolo (agar speak galti se band ho gaya ho to bhi) */
+  if (typeof say === 'function'){
+    const _say = say;
+    window.say = function(t, r){
+      try{ if (typeof state === 'object' && state) state.speak = true; }catch(e){}
+      return _say(t, r);
+    };
+  }
 })();
 </script>
 </body>
