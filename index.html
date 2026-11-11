@@ -271,15 +271,6 @@
       <button class="btn ghost" id="btnMirrorCheck" style="margin-top:8px">Mirror check karo</button>
       <div id="mirrorList" style="margin-top:8px"></div>
     </div>
-    <div class="field">
-      <label>Phone Bridge — MacroDroid webhook (asli system control)</label>
-      <input id="setBridge" placeholder="https://trigger.macrodroid.com/&lt;device-id&gt;/" autocomplete="off" />
-      <button class="btn ghost" id="btnBridgeTest" style="margin-top:8px">Bridge test karo</button>
-      <div class="note" style="margin-top:8px">
-        MacroDroid → Add Macro → Trigger → <b>Connectivity → Webhook (URL)</b> → identifier likho (jaise <code>wifi_off</code>) → wahan jo URL bane uska device-id wala hissa yahan daalo.
-        Identifiers: wifi_on/off, bt_on/off, torch_on/off, brightness_up/down, volume_up/down, dnd_on/off, airplane_on/off, hotspot_on/off, screenshot, lock_screen, bridge_test.
-        Webhook ke liye net + Google Play services chahiye.
-      </div>
     </div>
     <div class="field">
       <label>Backup — mirror badalne par bhi notes/contacts saath aayein</label>
@@ -381,7 +372,6 @@ const state = {
   aiProvider: LS.get('aiProvider', 'none'),
   aiKey: LS.get('aiKey', ''),
   aiModel: LS.get('aiModel', ''),
-  bridge: LS.get('bridge', ''),
   listening: false,
   timer: null
 };
@@ -766,23 +756,7 @@ function stripWords(s, words){
 
 function openUrl(url){ window.open(url, '_blank', 'noopener'); }
 
-/* ---- Phone Bridge: MacroDroid webhook ko signal bhejna ----
-   MacroDroid ka URL: https://trigger.macrodroid.com/<device-id>/<identifier>
-   identifier case-sensitive hota hai. */
-function bridgeUrl(id){
-  const base = (state.bridge || '').trim();
-  if (!/^https?:\/\//.test(base)) return '';
-  return (/\/$/.test(base) ? base : base + '/') + encodeURIComponent(id);
-}
-function bridgeFire(id){
-  const u = bridgeUrl(id);
-  if (!u) return false;
-  const hit = u + '?t=' + Date.now();
-  try{ const img = new Image(); img.src = hit; }catch(e){}
-  try{ fetch(hit, { mode:'no-cors', cache:'no-store' }).catch(()=>{}); }catch(e){}
-  return true;
-}
-
+/* Phone Bridge hata diya gaya — Suno phone ko control nahi karti */
 /* ---- phone ke asli app kholna (Chrome nahi) ---- */
 const APP_LINKS = {
   'whatsapp':   { app: 'whatsapp://send',            web: 'https://web.whatsapp.com' },
@@ -986,38 +960,13 @@ async function handle(raw, _depth){
     addHistory(text,'Madad dikhayi'); status('Mic dabao aur bolo'); return;
   }
 
-  // ---- phone system controls: MacroDroid bridge se (asli control)
-  const SYS_MAP = [
-    [/\b(wi-?fi)\b/, 'wifi'],
-    [/\b(bluetooth|bt)\b/, 'bt'],
-    [/\b(torch|flashlight)\b/, 'torch'],
-    [/\b(brightness|roshni)\b/, 'brightness'],
-    [/\b(volume|awaaz)\b/, 'volume'],
-    [/\b(dnd|do not disturb|silent|mute)\b/, 'dnd'],
-    [/\b(airplane|flight mode)\b/, 'airplane'],
-    [/\b(hotspot|tethering)\b/, 'hotspot'],
-    [/\b(screenshot|screen shot)\b/, 'screenshot'],
-    [/\b(lock|screen lock)\b/, 'lock']
-  ];
-  let sysKey = null, sysWhat = '';
-  for (const pair of SYS_MAP){ if (pair[0].test(t)){ sysKey = pair[1]; sysWhat = t.match(pair[0])[0]; break; } }
-  const sysVerb = /\b(on|off|band|bnd|chalu|chala|chalao|badha|badhao|ghata|ghatao|bujha|bujhao|increase|decrease|up|down|karo|kar|do|lo|le)\b/.test(t);
-  if (sysKey && sysVerb && !/\b(settings?|setting)\b/.test(t)){
-    let id = sysKey + '_on';
-    if (/\b(badha|badhao|increase|up|tez|zyada)\b/.test(t)) id = sysKey + '_up';
-    else if (/\b(ghata|ghatao|decrease|down|kam|dheemi|dheema)\b/.test(t)) id = sysKey + '_down';
-    else if (/\b(off|band|bnd|bujha|bujhao|mute)\b/.test(t)) id = sysKey + '_off';
-    if (sysKey === 'screenshot') id = 'screenshot';
-    if (sysKey === 'lock') id = 'lock_screen';
-
-    if (!bridgeFire(id)){
-      reply('🔒','Pehle bridge jodo', 'Browser akela <b>'+escapeHtml(sysWhat)+'</b> control nahi kar sakta — Android permission nahi deta. Settings me <b>Phone Bridge</b> mein MacroDroid ka webhook URL daal do, phir yeh command seedha phone par chalegi. (MacroDroid → Add Macro → Trigger → Webhook URL → identifier: <code>'+escapeHtml(id)+'</code>)');
-      say('Pehle settings me phone bridge jodo, phir '+sysWhat+' main khud kar dungi.');
-      addHistory(text,'Bridge nahi juda: '+id); status('Mic dabao aur bolo'); return;
-    }
-    reply('📲','Bridge bheja: '+escapeHtml(id), 'MacroDroid ko signal chala gaya. Agar wahan <code>'+escapeHtml(id)+'</code> naam ka macro bana hai to phone abhi kar dega.');
-    say('Theek hai, '+sysWhat+' ka signal bhej diya.');
-    addHistory(text,'Bridge: '+id); status('Mic dabao aur bolo'); return;
+  // ---- phone system controls: hata diya gaya (Suno phone ko control nahi karti)
+  if (/\b(wifi|bluetooth|torch|flashlight|brightness|volume|dnd|airplane|hotspot|screenshot|lock screen)\b/.test(t)
+      && /\b(on|off|band|chalu|badha|ghata|karo)\b/.test(t)){
+    reply('🙅','Ye main nahi karti', 'Main phone ki settings (WiFi, torch, volume) control nahi karti — sirf baat karti hoon aur jawab deti hoon.');
+    say('Ye main nahi kar sakti. Main sirf baat kar sakti hoon.');
+    status('Mic dabao aur bolo');
+    return;
   }
 
   // ---- time / date
@@ -1393,11 +1342,6 @@ const COMMANDS = [
   ['Mere notes dikhao','List notes','mere notes dikhao'],
   ['5 minute ka timer','Set a timer','5 minute ka timer'],
   ['7 baje ka alarm lagao','In-app alarm','7 baje ka alarm lagao'],
-  ['WiFi band karo / chalu karo','WiFi on-off (bridge)','wifi band karo'],
-  ['Torch chalu karo','Torch (bridge)','torch chalu karo'],
-  ['Volume badhao / ghatao','Volume (bridge)','volume badhao'],
-  ['Screenshot lo','Screenshot (bridge)','screenshot lo'],
-  ['Phone lock karo','Lock screen (bridge)','phone lock karo'],
   ['Madad / help','Help','madad']
 ];
 $('cmdList').innerHTML = COMMANDS.map(c=>
@@ -1977,14 +1921,7 @@ $('setMirrors').value = state.mirrors.join('\n');
 $('setAiProv').value = state.aiProvider;
 $('setAiKey').value = state.aiKey;
 $('setAiModel').value = state.aiModel;
-$('setBridge').value = state.bridge;
-$('btnBridgeTest').onclick = async ()=>{
-  const typed = ($('setBridge').value || '').trim();
-  if (!typed){ toast('Pehle webhook URL daalo'); return; }
-  state.bridge = typed; LS.set('bridge', typed);
-  const ok = bridgeFire('bridge_test');
-  toast(ok ? 'Bhej diya — phone par macro chala to notification aayega' : 'URL theek nahi lagta');
-};
+/* Phone Bridge hata diya — koi phone control nahi */
 $('setRate').oninput = ()=>{ $('rateVal').textContent = $('setRate').value; };
 $('setSave').onclick = ()=>{
   state.lang = $('setLang').value; LS.set('lang', state.lang);
@@ -1998,7 +1935,7 @@ $('setSave').onclick = ()=>{
   state.aiProvider = $('setAiProv').value; LS.set('aiProvider', state.aiProvider);
   state.aiKey = $('setAiKey').value.trim(); LS.set('aiKey', state.aiKey);
   state.aiModel = $('setAiModel').value.trim(); LS.set('aiModel', state.aiModel);
-  state.bridge = $('setBridge').value.trim(); LS.set('bridge', state.bridge);
+  
   const mlist = $('setMirrors').value.split('\n').map(s=>s.trim()).filter(s=>/^https?:\/\//.test(s));
   state.mirrors = mlist; LS.set('mirrors', mlist); renderMirrors();
   if (state.wake) wakeOn();
